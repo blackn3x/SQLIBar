@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>SQLiBar</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Parameter discovery extras */
+        .param-list {
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 12px;
+            margin-top: 6px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: transparent;
+        }
+
+        .param-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-bottom: 1px solid #2a2a2a;
+            cursor: default;
+        }
+
+            .param-item:hover {
+                background: #252525;
+            }
+
+            .param-item .param-name {
+                font-family: ui-monospace, monospace;
+                color: #fbbf24;
+                min-width: 100px;
+                word-break: break-all;
+            }
+
+            .param-item .param-src {
+                color: #888;
+                font-size: 11px;
+                flex: 1;
+            }
+
+            .param-item .param-val {
+                color: #94a3b8;
+                font-size: 11px;
+                max-width: 140px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .param-item button {
+                font-size: 11px;
+                padding: 2px 8px;
+                flex-shrink: 0;
+            }
+
+        .param-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: #333;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+            .param-badge.form {
+                background: #1e3a5f;
+                color: #93c5fd;
+            }
+
+            .param-badge.hidden {
+                background: #4a1c1c;
+                color: #fca5a5;
+            }
+
+            .param-badge.link {
+                background: #1a3a2a;
+                color: #86efac;
+            }
+
+            .param-badge.cookie {
+                background: #3b2a1a;
+                color: #fcd34d;
+            }
+
+            .param-badge.query {
+                background: #2a2a3b;
+                color: #c4b5fd;
+            }
+
+            .param-badge.body {
+                background: transparent;
+                color: #f0abfc;
+            }
+
+            .param-badge.header {
+                background: #1a3b3b;
+                color: #67e8f9;
+            }
+
+            .param-badge.json {
+                background: #3b3b1a;
+                color: #fde047;
+            }
+
+        .param-empty {
+            color: #666;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .json-tree {
+            font-family: ui-monospace, monospace;
+            font-size: 12px;
+            max-height: 180px;
+            overflow: auto;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin-top: 4px;
+        }
+
+            .json-tree .jk {
+                color: #fbbf24;
+                cursor: pointer;
+            }
+
+                .json-tree .jk:hover {
+                    text-decoration: underline;
+                    color: #fde68a;
+                }
+
+            .json-tree .jv {
+                color: #94a3b8;
+            }
+
+            .json-tree .jd {
+                color: #666;
+                margin-right: 4px;
+            }
+
+        .json-path-hint {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        #pageParamStats, #netParamStats {
+            font-size: 11px;
+            color: #888;
+            margin-left: 8px;
+        }
+        .reflect-hit {
+            background: #7c3aed;
+            color: #fff;
+            padding: 0 3px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+        .diff-added {
+            background: rgba(34, 197, 94, 0.25);
+            color: #86efac;
+        }
+        .diff-removed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            text-decoration: line-through;
+        }
+        #reflectionBox, #diffBox {
+            font-size: 12px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 8px;
+            background: #1a1a1a;
+            max-height: 180px;
+            overflow: auto;
+        }
+        #reflectionBox .ref-title, #diffBox .diff-title {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+
+        /* Syntax highlighting tokens for response body */
+        .tok-html-tag { color: #7dd3fc; }
+        .tok-html-attr { color: #fbbf24; }
+        .tok-html-val { color: #86efac; }
+        .tok-html-comment { color: #6b7280; font-style: italic; }
+        .tok-json-key { color: #fbbf24; }
+        .tok-json-str { color: #86efac; }
+        .tok-json-num { color: #67e8f9; }
+        .tok-json-bool { color: #c084fc; }
+        .tok-json-null { color: #f87171; }
+        .tok-json-punct { color: #94a3b8; }
+
+        .response-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-left: auto;
+        }
+        .response-actions .btn-secondary {
+            font-size: 11px;
+            padding: 3px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h3 data-i18n="header.title">SQLiBar</h3>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="tester" data-i18n="tab.tester">URL / Payload</button>
+            <!-- <button class="tab-btn" data-tab="request">Request Builder</button>-->
+            <button class="tab-btn" data-tab="network" data-i18n="tab.network">Live Network</button>
+            <button class="tab-btn" data-tab="tools" data-i18n="tab.tools">Encode</button>
+            <button class="tab-btn" data-tab="options" data-i18n="tab.options">Optionen</button>
+        </div>
+    </div>
+    <!-- ===================== TAB 1: URL / Payload Tester ===================== -->
+    <div id="tester" class="tab-content active">
+
+
+        <section class="section">
+            <label data-i18n="url.label">URL</label>
+            <textarea id="urlInput" rows="3" style="width:40%" data-i18n-placeholder="url.placeholder" placeholder="https://..."></textarea>
+            <div class="row" style="margin-top:1px">
+                <button id="reloadUrl" class="btn-secondary" data-i18n="url.reload" data-i18n-title="url.reload" title=" Load current URL">↻ Aktuelle laden</button>
+                <button id="copyUrl" class="btn-secondary" data-i18n="url.copy" data-i18n-title="url.copy" title="Copy URL">📋 URL kopieren</button>
+                <button id="copyCurl" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">₿ cURL</button>
+                <!--<button id="openUrl" class="btn-secondary" title="In aktuellem Tab öffnen">↗ Open</button> -->
+                
+                <button id="injectPage" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
+            </div>
+        </section>
+        <div class="panels-row">
+            <details class="section response-view">
+                <summary data-i18n="presets.summary">Payload-Presets</summary>
+                <div>
+                    <select id="presetCategory">
+                        <!-- Kategorien per JS -->
+                    </select>
+                    <select id="presetSelect">
+                        <!-- Presets der Kategorie per JS -->
+                    </select>
+                    <!-- Union Spalten-Steuerung (nur bei Union sichtbar) -->
+                    <div id="unionControls" class="union-box" style="display:none">
+                        <span data-i18n="presets.columns">Spalten:</span>
+                        <input id="unionColumns" type="number" min="1" max="50" value="5" style="width:60px">
+                        <span class="hint" data-i18n="presets.unionHint">→ Erzeugt 1,2,3… oder NULL,NULL…</span>
+                    </div>
+                    <div class="row" style="margin-top:1px">
+                        <input id="customPayload" type="text" data-i18n-placeholder="presets.placeholder" placeholder="Preset…">
+                        <button id="applyCustom" class="btn-primary" data-i18n="presets.apply">Anwenden</button>
+                    </div>
+                    <div class="hint" data-i18n="presets.hint">
+                        Klick auf „Anwenden“, um in die URL zu schreiben
+                    </div>
+                </div>
+            </details>
+            <details class="section response-view">
+                <summary data-i18n="req.summary">Request-Optionen</summary>
+                <div style="padding-top:1px">
+                    <div class="row" style="margin-bottom:6px;align-items:center">
+                        <label style="margin:0;text-transform:none;font-weight:500" data-i18n="req.method">Methode</label>
+                        <select id="testerMethod" style="width:110px">
+                            <option value="GET" selected>GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                            <option value="DELETE">DELETE</option>
+                            <option value="HEAD">HEAD</option>
+                            <option value="OPTIONS">OPTIONS</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <label>
+                            <input type="checkbox" id="optSendHeaders" checked> <span data-i18n="req.customHeaders">Eigene Header</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="optSendCookies" checked> <span data-i18n="req.sendCookies">Cookies mitsenden</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="optSetCookies" checked> <span data-i18n="req.setCookies">Cookies setzen (API)</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="optNavigate" checked> <span data-i18n="req.navigate">Seite navigieren</span>
+                        </label>
+                    </div>
+                    <textarea id="testerHeaders" rows="4" data-i18n-placeholder="req.headersPlaceholder" placeholder="User-Agent: ...
+Cookie: tracking_id=guest
+X-Forwarded-For: 127.0.0.1"></textarea>
+
+                    <div class="row" style="margin-top:6px;align-items:center;gap:8px;flex-wrap:wrap">
+                        <label style="margin:0;text-transform:none;font-weight:500" data-i18n="req.header">Header</label>
+                        <select id="headerPreset" style="min-width:220px">
+                            <option value="" data-i18n="req.chooseHeader">– Header wählen –</option>
+
+                            <optgroup label="IP / Proxy" data-i18n-label="hdr.ipProxy">
+                                <option value="X-Forwarded-For: ">X-Forwarded-For</option>
+                                <option value="X-Real-IP: ">X-Real-IP</option>
+                                <option value="X-Client-IP: ">X-Client-IP</option>
+                                <option value="X-Originating-IP: ">X-Originating-IP</option>
+                                <option value="CF-Connecting-IP: ">CF-Connecting-IP</option>
+                                <option value="True-Client-IP: ">True-Client-IP</option>
+                                <option value="Forwarded: ">Forwarded (RFC 7239)</option>
+                                <option value="X-Forwarded-For: 127.0.0.1, ">X-Forwarded-For (chain)</option>
+                            </optgroup>
+
+                            <optgroup label="Host / URL Rewrite" data-i18n-label="hdr.hostRewrite">
+                                <option value="X-Forwarded-Host: ">X-Forwarded-Host</option>
+                                <option value="X-Host: ">X-Host</option>
+                                <option value="X-Original-URL: ">X-Original-URL</option>
+                                <option value="X-Rewrite-URL: ">X-Rewrite-URL</option>
+                                <option value="X-Original-Host: ">X-Original-Host</option>
+                                <option value="X-Forwarded-Server: ">X-Forwarded-Server</option>
+                            </optgroup>
+
+                            <optgroup label="Classic" data-i18n-label="hdr.classic">
+                                <option value="User-Agent: ">User-Agent</option>
+                                <option value="Referer: ">Referer</option>
+                                <option value="Cookie: ">Cookie</option>
+                                <option value="Origin: ">Origin</option>
+                                <option value="Host: ">Host</option>
+                            </optgroup>
+
+                            <optgroup label="Auth / Token" data-i18n-label="hdr.auth">
+                                <option value="Authorization: ">Authorization</option>
+                                <option value="Authorization: Bearer ">Authorization (Bearer)</option>
+                                <option value="Authorization: Basic ">Authorization (Basic)</option>
+                                <option value="X-Api-Key: ">X-Api-Key</option>
+                                <option value="X-Auth-Token: ">X-Auth-Token</option>
+                                <option value="X-Access-Token: ">X-Access-Token</option>
+                            </optgroup>
+
+                            <optgroup label="Content / Upload" data-i18n-label="hdr.content">
+                                <option value="Content-Type: ">Content-Type</option>
+                                <option value="Content-Disposition: form-data; name=&quot;file&quot;; filename=&quot;">Content-Disposition (filename)</option>
+                                <option value="Content-Disposition: attachment; filename=&quot;">Content-Disposition (attachment)</option>
+                            </optgroup>
+
+                            <optgroup label="Language / Accept" data-i18n-label="hdr.language">
+                                <option value="Accept-Language: ">Accept-Language</option>
+                                <option value="Accept: ">Accept</option>
+                                <option value="Accept-Encoding: ">Accept-Encoding</option>
+                                <option value="Accept-Charset: ">Accept-Charset</option>
+                            </optgroup>
+
+                            <optgroup label="X-Header (Custom)" data-i18n-label="hdr.xheader">
+                                <option value="X-Filter: ">X-Filter</option>
+                                <option value="X-Requested-With: ">X-Requested-With</option>
+                                <option value="X-HTTP-Method-Override: ">X-HTTP-Method-Override</option>
+                                <option value="X-Custom-IP: ">X-Custom-IP</option>
+                                <option value="X-Request-ID: ">X-Request-ID</option>
+                            </optgroup>
+
+                            <optgroup label="Other / Exotic" data-i18n-label="hdr.other">
+                                <option value="From: ">From</option>
+                                <option value="Via: ">Via</option>
+                                <option value="Max-Forwards: ">Max-Forwards</option>
+                                <option value="TE: ">TE</option>
+                                <option value="Trailer: ">Trailer</option>
+                                <option value="Upgrade: ">Upgrade</option>
+                            </optgroup>
+                        </select>
+
+                    </div>
+                    <button type="button" id="addHeaderBtn" class="btn-secondary" data-i18n="req.addHeader">+ Hinzufügen</button>
+                    <div class="row" style="margin-top:4px">
+                        <button id="reloadTesterHeaders" class="btn-secondary" data-i18n="req.liveHeader">↻ Live-Header</button>
+                        <button id="loadNetHeaders" class="btn-secondary" data-i18n="req.lastNetwork"> ⬇ Letzter Network-Request</button>
+                        <button id="clearTesterHeaders" class="btn-secondary" data-i18n="req.clear">Leeren</button>
+                        <button id="copyCurl2" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">₿ cURL</button>
+                        <button id="injectPage2" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
+                    </div>
+                    <label style="margin-top:8px;display:block"><span data-i18n="req.body">Body</span> <span class="hint" style="text-transform:none;font-weight:400" data-i18n="req.bodyHint">(POST / PUT / PATCH …)</span></label>
+
+                    <textarea id="testerBody" rows="3" data-i18n-placeholder="req.bodyPlaceholder" placeholder="id=1&amp;name=test  or  {&quot;id&quot;:1}"></textarea>
+                    <div class="row" style="margin-top:4px;gap:8px;flex-wrap:wrap">
+                        <label>
+                            <input type="checkbox" id="optBodyJson"> <span data-i18n="req.bodyJson">Content-Type: application/json</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="optBodyForm"> <span data-i18n="req.bodyForm">Content-Type: application/x-www-form-urlencoded</span>
+                        </label>
+                        <button id="parseJsonBodyBtn" class="btn-secondary" style="font-size:11px;padding:3px 8px" data-i18n="req.jsonKeys">JSON Keys ▶</button>
+                    </div>
+                    <!-- JSON Nested Body Explorer -->
+                    <div id="jsonExplorerBox" style="display:none;margin-top:6px">
+                        <div class="row" style="justify-content:space-between;align-items:center">
+                            <span style="font-size:12px;color:#aaa" data-i18n="req.jsonExplorer">JSON Keys (Klick = Pfad kopieren / in Payload)</span>
+                            <button id="jsonExplorerClose" class="btn-secondary" style="font-size:11px;padding:2px 8px">✕</button>
+                        </div>
+                        <div id="jsonTree" class="json-tree"></div>
+                        <div id="jsonPathHint" class="json-path-hint"></div>
+                        <div class="row" style="margin-top:4px;gap:6px">
+                            <button id="jsonToPayload" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonToPayload">→ Payload</button>
+                            <button id="jsonToUrl" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonToUrl">→ URL (?key=)</button>
+                            <button id="jsonCopyPath" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonCopyPath">Pfad kopieren</button>
+                        </div>
+                    </div>
+                </div>
+            </details>
+            <details class="section response-view">
+                <summary><span data-i18n="page.summary">Seiten-Parameter-Scanner</span> <span id="pageParamStats"></span></summary>
+                <div style="padding-top:1px">
+                    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px">
+                        <button id="scanPageParams" class="btn-primary" data-i18n="page.scan">🔍 Seite scannen</button>
+                        <button id="clearPageParams" class="btn-secondary" data-i18n="page.clear">Leeren</button>
+                        <label style="margin:0;font-weight:400;text-transform:none">
+                            <input type="checkbox" id="scanIncludeLinks" checked> <span data-i18n="page.links">Links</span>
+                        </label>
+                        <label style="margin:0;font-weight:400;text-transform:none">
+                            <input type="checkbox" id="scanIncludeCookies" checked> <span data-i18n="page.cookies">Cookies</span>
+                        </label>
+                        <label style="margin:0;font-weight:400;text-transform:none">
+                            <input type="checkbox" id="scanIncludeHidden" checked> <span data-i18n="page.hidden">Hidden</span>
+                        </label>
+                    </div>
+                    <div id="pageParamList" class="param-list">
+                        <div class="param-empty" data-i18n="page.empty">Seite scannen, um Formularfelder, Hidden-Inputs, Query-Params & Cookies zu finden.</div>
+                    </div>
+                </div>
+            </details>
+            <details class="section response-view">
+                <summary data-i18n="sqli.summary">SQLi-Erkennung</summary>
+                <div style="padding-top:1px">
+                    <div id="sqliDetectBox">
+                        <div style="color:#888" data-i18n="sqli.noResponse">Keine Response.</div>
+                    </div>
+                    <div class="row" style="margin-top:6px;gap:8px;flex-wrap:wrap">
+                        <button id="setBaselineBtn" class="btn-secondary" data-i18n="sqli.setBaseline">Baseline setzen (Länge)</button>
+                        <button id="setTimeBaselineBtn" class="btn-secondary" data-i18n="sqli.setTimeBaseline">Zeit-Baseline setzen</button>
+                        <button id="clearBaselineBtn" class="btn-secondary" data-i18n="sqli.clearBaselines">Baselines löschen</button>
+                        <span id="baselineInfo"></span>
+                    </div>
+                    <div id="reflectionBox" style="margin-top:8px;display:none"></div>
+                    <div id="diffBox" style="margin-top:8px;display:none"></div>
+                </div>
+            </details>
+            <details id="testerResponseDetails" class="response-view">
+                <summary data-i18n="resp.summary">Seiten-Response</summary>
+                <div class="response-search-bar">
+                    <input id="testerResponseSearch" type="text" data-i18n-placeholder="resp.search" placeholder="In Response suchen…">
+                    <button id="testerSearchPrev">↑</button>
+                    <button id="testerSearchNext">↓</button>
+                    <label>
+                        <input id="testerSearchCase" type="checkbox"> Aa
+                    </label>
+                    <span id="testerSearchInfo">0 / 0</span>
+                    <div class="response-actions">
+                        <button id="copyResponseBtn" class="btn-secondary" data-i18n="resp.copyResponse">Response kopieren</button>
+                        <button id="copyBodyBtn" class="btn-secondary" data-i18n="resp.copyBody">Nur Body kopieren</button>
+                    </div>
+                </div>
+                <pre id="testerResponse" data-placeholder="Response..."></pre>
+            </details>
+        </div><!-- /.panels-row -->
+    </div>
+
+    <!-- ===================== TAB: Live Network ===================== -->
+    <div id="network" class="tab-content">
+        <section class="section">
+            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+                <label style="margin:0" data-i18n="net.title">Live HTTP Requests</label>
+                <div class="row" style="gap:6px;flex-wrap:wrap">
+                    <input id="netSearch" type="text" data-i18n-placeholder="net.search" placeholder="URL / Methode suchen…" style="width:140px;flex:1">
+                    <select id="netFilter" style="width:110px">
+                        <option value="all" data-i18n="net.all">Alle</option>
+                        <option value="xhr" data-i18n="net.xhr">XHR / Fetch</option>
+                        <option value="doc" data-i18n="net.doc">Dokumente</option>
+                        <option value="post" data-i18n="net.post">Nur POST</option>
+                    </select>
+                    <button id="clearNetwork" class="btn-secondary" style="font-size:11px;padding:4px 10px" data-i18n="net.clear">Leeren</button>
+                </div>
+            </div>
+            <div id="networkList" class="network-list">
+                <div class="network-empty" data-i18n="net.empty">Warte auf Requests… navigiere oder interagiere mit der Seite.</div>
+            </div>
+            <div class="row" style="margin-top:6px">
+
+                <button id="netCopyUrl" class="btn-secondary" data-i18n="net.copyUrl">URL kopieren</button>
+            </div>
+        </section>
+        <section class="section">
+            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+                <label style="margin:0"><span data-i18n="net.params">Gesammelte Parameter</span> <span id="netParamStats"></span></label>
+                <div class="row" style="gap:6px">
+                    <input id="netParamSearch" type="text" data-i18n-placeholder="net.filterParams" placeholder="Parameter filtern…" style="width:120px">
+                    <button id="clearNetParams" class="btn-secondary" style="font-size:11px;padding:3px 8px" data-i18n="net.clear">Leeren</button>
+                </div>
+            </div>
+            <div id="netParamList" class="param-list">
+                <div class="param-empty" data-i18n="net.paramsEmpty">Parameter aus erfassten Requests erscheinen hier automatisch.</div>
+            </div>
+        </section>
+        <section class="section">
+            <label data-i18n="net.details">Request-Details</label>
+            <pre id="networkDetails" class="response-view" data-i18n-placeholder="net.detailsPlaceholder" data-placeholder="Click a request above to inspect headers & body"></pre>
+        </section>
+    </div>
+    <!-- ===================== TAB 3: Tools ===================== -->
+    <div id="tools" class="tab-content">
+        <section class="section">
+            <label data-i18n="enc.label">Encode / Decode</label>
+            <textarea id="encodeInput" rows="3" data-i18n-placeholder="enc.placeholder" placeholder="Text einfügen…"></textarea>
+            <div class="row" style="margin:8px 0">
+                <select id="encodingType" style="flex:1">
+                    <option value="url">URL Encode</option>
+                    <option value="url2">Double URL Encode</option>
+                    <option value="base64">Base64</option>
+                    <option value="base64url">Base64 URL-Safe</option>
+                    <option value="hex">Hex (spaced)</option>
+                    <option value="hex0x">Hex (0x...)</option>
+                    <option value="hexslash">Hex (\x..)</option>
+                    <option value="ascii">ASCII / Decimal</option>
+                    <option value="sqlchar">SQL CHAR()</option>
+                    <option value="unicode">Unicode \u</option>
+                    <option value="unicodeu">Unicode %u</option>
+                    <option value="html">HTML Entities</option>
+                    <option value="json">JSON</option>
+                    <option value="jwt">JWT Decode</option>
+                    <option value="rot13">ROT13</option>
+                    <option value="binary">Binary</option>
+                </select>
+                <button id="encodeBtn" class="btn-primary" data-i18n="enc.encode">Encode</button>
+                <button id="decodeBtn" class="btn-secondary" data-i18n="enc.decode">Decode</button>
+            </div>
+            <textarea id="encodeOutput" rows="3" data-i18n-placeholder="enc.result" placeholder="Ergebnis…"></textarea>
+            <button id="copyEncode" class="btn-secondary" style="margin-top:6px" data-i18n="enc.copy">Kopieren</button>
+        </section>
+    </div>
+
+    <!-- ===================== TAB: Options / Theme ===================== -->
+    <div id="options" class="tab-content">
+        <section class="section">
+            <label data-i18n="opt.language">Sprache</label>
+            <p class="hint" style="margin-bottom:10px" data-i18n="opt.languageHint">Oberflächensprache wählen.</p>
+            <div class="row" style="gap:10px;align-items:center">
+                <select id="langSelect" style="min-width:160px">
+
+                    <option value="en" data-i18n="opt.lang.en">English</option>
+                    <option value="es" data-i18n="opt.lang.es">Español</option>
+                    <option value="de" data-i18n="opt.lang.de">Deutsch</option>
+                    <option value="ru" data-i18n="opt.lang.ru">Русский</option>
+                    <option value="zh" data-i18n="opt.lang.zh">中文</option>
+                </select>
+            </div>
+        </section>
+        <section class="section">
+            <label data-i18n="opt.colorScheme">Farbschema</label>
+            <p class="hint" style="margin-bottom:10px" data-i18n="opt.colorHint">Wähle ein Farbschema.</p>
+            <div id="themeGrid" class="theme-grid"></div>
+        </section>
+        <section class="section">
+            <label data-i18n="opt.customAccent">Eigener Akzent</label>
+            <div class="row" style="gap:10px;align-items:center">
+                <input type="color" id="customAccent" value="#00ff66" style="width:48px;height:32px;padding:2px;cursor:pointer;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                <input type="text" id="customAccentHex" value="#00ff66" style="width:100px;font-family:var(--mono)" maxlength="7" placeholder="#00ff66">
+                <button id="applyCustomAccent" class="btn-primary" data-i18n="opt.apply">Anwenden</button>
+                <button id="resetThemeBtn" class="btn-secondary" data-i18n="opt.reset">Standard zurücksetzen</button>
+            </div>
+        </section>
+        <section class="section">
+            <label data-i18n="opt.preview">Vorschau</label>
+            <div class="theme-preview">
+                <button class="btn-primary" data-i18n="opt.primaryBtn">Primary Button</button>
+                <button class="btn-secondary" data-i18n="opt.secondaryBtn">Secondary</button>
+                <span class="theme-preview-text"><span data-i18n="opt.accentText">Akzent-Text ·</span> <code style="color:var(--primary)">var(--primary)</code></span>
+                <div class="theme-preview-bar"></div>
+            </div>
+        </section>
+
+        <section class="section">
+            <label data-i18n="opt.update">Update</label>
+            <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+                <span id="addonVersionLabel" style="font-size:12px;color:var(--text-muted)" data-version="1.0.0">Version: –</span>
+                <button id="checkUpdateBtn" class="btn-secondary" data-i18n="opt.checkUpdate">Nach Updates suchen</button>
+            </div>
+            <div id="updateStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+        </section>
+    </div>
+
+    <script src="i18n.js"></script>
+    <script src="encoder.js"></script>
+    <script src="presets.js"></script>
+    <script src="panel.js"></script>
+</body>
+</html>
