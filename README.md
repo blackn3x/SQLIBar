@@ -1,3 +1,4 @@
+![Screenshot](images/screenshot.png)
 # SQLiBar – Pentesting & SQLi Toolkit
 
 **A Firefox Developer Tools extension** for security testing, real-time SQL injection pattern detection, request manipulation, parameter discovery, payload encoding, and multi-language UI support.
