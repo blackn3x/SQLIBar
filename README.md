@@ -99,7 +99,7 @@ SQLiBar/
 ├── encoder.js
 ├── presets.js
 ├── styles.css
-├── background.js          # if present
+├── background.js          
 ├── icons/
 ├── LICENSE
 └── README.md
