@@ -56,7 +56,7 @@ URL, Double URL, Base64, Base64 URL-Safe, Hex (spaced / `0x` / `\x`), ASCII/Deci
 ## Installation
 
 ### Firefox Add-ons (recommended)
-Install from [addons.mozilla.org](https://addons.mozilla.org) (link once published).
+Install from [addons.mozilla.org](https://addons.mozilla.org) (Coming Soon).
 
 ### Temporary load (development)
 1. Open `about:debugging#/runtime/this-firefox`
