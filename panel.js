@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // ======================
     const ADDON_VERSION = "1.0.0"; // <-- aktuelle Version hier pflegen
     // JSON z.B. auf GitHub Raw: { "version": "1.3.0", "url": "https://..." }
-    const UPDATE_URL = "https://pastebin.com/raw/uT7jVHq0";
+    const UPDATE_URL = "https://raw.githubusercontent.com/blackn3x/SQLIBar/refs/heads/main/version.json";
 
     function parseVersion(v) {
         return String(v || "0")
@@ -246,6 +246,8 @@ window.addEventListener("DOMContentLoaded", () => {
         if (db) db.style.display = "none";
         log("Alle Baselines gelöscht");
     });
+
+    //wodkowkdow
 
     const SQLI_PATTERNS = [
         // ===================== MySQL / MariaDB =====================
@@ -1338,6 +1340,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const netFilter = document.getElementById("netFilter");
     let networkEntries = [];
     let selectedNetIndex = -1;
+    let netIdCounter = 1;
 
     function methodClass(m) {
         return (m || "GET").toUpperCase();
@@ -1366,6 +1369,78 @@ window.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
+    function countParamsForEntry(entry) {
+        if (!entry || !entry._id) return 0;
+        let n = 0;
+        for (const p of netParamMap.values()) {
+            if (p.requestIds && p.requestIds.has(entry._id)) n++;
+        }
+        return n;
+    }
+
+    function getParamsForEntry(entry) {
+        if (!entry || !entry._id) return [];
+        const items = [];
+        for (const p of netParamMap.values()) {
+            if (p.requestIds && p.requestIds.has(entry._id)) {
+                items.push(p);
+            }
+        }
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        return items;
+    }
+
+    function buildInlineParamsHtml(entry) {
+        const items = getParamsForEntry(entry);
+        const title = typeof t === "function" ? t("net.selectedParams") : "Parameters of this request";
+        if (!items.length) {
+            const empty = typeof t === "function" ? t("net.noParamsForRequest") : "No parameters for this request.";
+            return `<div class="network-params-expand" data-expand-for="${entry._id}">
+                <div class="param-empty" style="padding:6px 8px">${empty}</div>
+            </div>`;
+        }
+        const rows = items.map((p) => {
+            const val = p.value ? escapeHtml(String(p.value).substring(0, 40)) : "";
+            return '<div class="param-item">' +
+                '<span class="param-badge ' + p.type + '">' + escapeHtml(p.type) + '</span>' +
+                '<span class="param-name">' + escapeHtml(p.name) + '</span>' +
+                '<span class="param-val" title="' + escapeHtml(p.value || "") + '">' + val + '</span>' +
+                '<button class="btn-secondary selp-url" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "1") + '">URL</button>' +
+                '<button class="btn-secondary selp-body" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "1") + '">Body</button>' +
+                '<button class="btn-secondary selp-pl" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "") + '">PL</button>' +
+            '</div>';
+        }).join("");
+        return `<div class="network-params-expand" data-expand-for="${entry._id}">
+            <div style="font-size:11px;color:#888;padding:4px 8px 2px">${escapeHtml(title)} (${items.length})</div>
+            <div class="param-list" style="max-height:180px;border:none;margin:0">${rows}</div>
+        </div>`;
+    }
+
+    function bindInlineParamButtons(root) {
+        if (!root) return;
+        root.querySelectorAll(".selp-url").forEach(btn => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                appendParamToUrl(btn.dataset.name, btn.dataset.val || "1");
+                log("Sel-Param → URL: " + btn.dataset.name);
+            });
+        });
+        root.querySelectorAll(".selp-body").forEach(btn => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                appendParamToBody(btn.dataset.name, btn.dataset.val || "1");
+                log("Sel-Param → Body: " + btn.dataset.name);
+            });
+        });
+        root.querySelectorAll(".selp-pl").forEach(btn => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                if (customPayload) customPayload.value = btn.dataset.name + "=" + (btn.dataset.val || "");
+                log("Sel-Param → Payload: " + btn.dataset.name);
+            });
+        });
+    }
+
     function renderNetworkList() {
         if (!networkList) return;
         const filter = netFilter?.value || "all";
@@ -1379,21 +1454,56 @@ window.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        networkList.innerHTML = visible.map(({ e, i }) => `
-            <div class="network-item ${i === selectedNetIndex ? "active" : ""}" data-idx="${i}">
+        networkList.innerHTML = visible.map(({ e, i }) => {
+            const pCount = countParamsForEntry(e);
+            const isActive = i === selectedNetIndex;
+            const chevron = isActive ? "▼" : "▶";
+            const pBadge = pCount > 0
+                ? `<span class="param-badge query" style="margin-left:4px;flex-shrink:0" title="${pCount} Parameter">${chevron} ${pCount}p</span>`
+                : `<span style="margin-left:4px;flex-shrink:0;color:#555;font-size:10px">${chevron}</span>`;
+            const shortUrl = e.url.length > 90 ? e.url.substring(0, 87) + "…" : e.url;
+            let html = `
+            <div class="network-item ${isActive ? "active" : ""}" data-idx="${i}">
                 <span class="network-method ${methodClass(e.method)}">${e.method}</span>
                 <span class="network-status ${statusClass(e.status)}">${e.status || "…"}</span>
-                <span class="network-url" title="${e.url.replace(/"/g, "&quot;")}">${e.url}</span>
-            </div>
-        `).join("");
+                <span class="network-url" title="${e.url.replace(/"/g, "&quot;")}">${shortUrl}</span>
+                ${pBadge}
+            </div>`;
+            // Aufklappen: Parameter direkt unter dem Request
+            if (isActive) {
+                html += buildInlineParamsHtml(e);
+            }
+            return html;
+        }).join("");
 
         networkList.querySelectorAll(".network-item").forEach(el => {
             el.addEventListener("click", () => {
-                selectedNetIndex = parseInt(el.dataset.idx, 10);
-                showNetworkDetails(selectedNetIndex);
+                const idx = parseInt(el.dataset.idx, 10);
+                // Toggle: nochmal klicken = zuklappen
+                if (selectedNetIndex === idx) {
+                    selectedNetIndex = -1;
+                    if (networkDetails) networkDetails.innerHTML = "";
+                } else {
+                    selectedNetIndex = idx;
+                    showNetworkDetails(selectedNetIndex);
+                }
                 renderNetworkList();
+                if (document.getElementById("netParamOnlySelected")?.checked) {
+                    renderNetParamList();
+                }
             });
         });
+
+        // Buttons in aufgeklappten Param-Zeilen
+        networkList.querySelectorAll(".network-params-expand").forEach(exp => {
+            exp.addEventListener("click", (ev) => ev.stopPropagation());
+            bindInlineParamButtons(exp);
+        });
+    }
+
+    // Kompatibilität: alte Aufrufe von renderSelectedRequestParams() werden zu no-op / re-render
+    function renderSelectedRequestParams() {
+        renderNetworkList();
     }
 
     function showNetworkDetails(idx) {
@@ -1405,6 +1515,17 @@ window.addEventListener("DOMContentLoaded", () => {
         html += `<span class="tok-dim">Status:</span> <span class="${st}">${escapeHtml(e.status || "pending")} ${escapeHtml(e.statusText || "")}</span>\n`;
         html += `<span class="tok-dim">Type:</span> <span class="tok-val">${escapeHtml(e.type || "-")}</span>\n`;
         html += `<span class="tok-dim">Time:</span> <span class="tok-val">${escapeHtml(e.time || "-")}</span>\n`;
+
+        // Parameter-Übersicht in den Details
+        const params = getParamsForEntry(e);
+        if (params.length) {
+            html += `\n<span class="tok-section">── Parameter (${params.length}) ──</span>\n`;
+            params.forEach(p => {
+                const v = (p.value || "").substring(0, 80);
+                html += `<span class="param-badge ${p.type}" style="margin-right:4px">${escapeHtml(p.type)}</span>`;
+                html += `<span class="tok-key">${escapeHtml(p.name)}</span><span class="tok-dim">=</span><span class="tok-val">${escapeHtml(v)}</span>\n`;
+            });
+        }
 
         html += `\n<span class="tok-section">── Request Headers ──</span>\n`;
         html += formatHeaderBlock(e.reqHeaders);
@@ -1453,6 +1574,7 @@ window.addEventListener("DOMContentLoaded", () => {
             else if (res.content && res.content.mimeType) type = res.content.mimeType;
 
             const entry = {
+                _id: netIdCounter++,
                 method,
                 url,
                 status,
@@ -1467,16 +1589,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
             networkEntries.unshift(entry);
             if (networkEntries.length > 200) networkEntries.pop();
+            // Indices shift: if something was selected, adjust
+            if (selectedNetIndex >= 0) selectedNetIndex++;
 
             const idx = 0;
             if (typeof harEntry.getContent === "function") {
                 harEntry.getContent((content) => {
-                    if (content && networkEntries[idx]) {
-                        networkEntries[idx].resBodyPreview = String(content).substring(0, 2000);
-                        if (selectedNetIndex === idx) showNetworkDetails(idx);
-                    
+                    // find entry by _id in case indices shifted
+                    const cur = networkEntries.find(x => x._id === entry._id);
+                    if (content && cur) {
+                        cur.resBodyPreview = String(content).substring(0, 2000);
+                        const curIdx = networkEntries.indexOf(cur);
+                        if (selectedNetIndex === curIdx) showNetworkDetails(curIdx);
                     }
-                    // Nach dem bestehenden resBodyPreview-Code:
                     if (pendingOpenUrl && content) {
                         const t = (type || "").toLowerCase();
                         const mime = (res.content?.mimeType || "").toLowerCase();
@@ -1504,16 +1629,14 @@ window.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
+            // Parameter sammeln (mit Request-ID)
+            try {
+                collectParamsFromEntry(entry);
+                renderNetParamList();
+            } catch (e2) { /* aggregator not ready */ }
+
             renderNetworkList();
             log(`${method} ${status || "…"} ${url.substring(0, 60)}`);
-
-            // Network Parameter Aggregator
-            try {
-                if (typeof collectParamsFromEntry === "function" && networkEntries.length) {
-                    collectParamsFromEntry(networkEntries[0]);
-                    if (typeof renderNetParamList === "function") renderNetParamList();
-                }
-            } catch (e2) { /* aggregator not ready */ }
         } catch (err) {
             console.warn("network entry error", err);
         }
@@ -1552,10 +1675,73 @@ window.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("netCopyUrl")?.addEventListener("click", () => {
         const e = networkEntries[selectedNetIndex];
-        if (!e) return;
+        if (!e) { log(typeof t === "function" ? t("net.noRequestSelected") : "No request selected"); return; }
         navigator.clipboard.writeText(e.url);
         log("Request URL copied");
     });
+
+    /** Request → Tester Tab übernehmen */
+    function sendNetEntryToTester(e, autoOpen) {
+        if (!e) { log(typeof t === "function" ? t("net.noRequestSelected") : "No request selected"); return; }
+        if (urlInput) urlInput.value = e.url;
+        const methodEl = document.getElementById("testerMethod");
+        if (methodEl) methodEl.value = e.method || "GET";
+        const th = document.getElementById("testerHeaders");
+        if (th && e.reqHeaders && e.reqHeaders !== "(none)") th.value = e.reqHeaders;
+        const tb = document.getElementById("testerBody");
+        if (tb) tb.value = e.reqBody || "";
+        if (e.reqBody && (e.reqBody.trim().startsWith("{") || e.reqBody.trim().startsWith("["))) {
+            const oj = document.getElementById("optBodyJson");
+            if (oj) oj.checked = true;
+        } else if (e.reqBody) {
+            const of = document.getElementById("optBodyForm");
+            if (of) of.checked = true;
+        }
+        // switch to tester tab
+        document.querySelector('.tab-btn[data-tab="tester"]')?.click();
+        log((typeof t === "function" ? t("net.toTesterLog") : "Network → Tester:") + " " + e.method + " " + e.url.substring(0, 50));
+        if (autoOpen) {
+            setTimeout(() => document.getElementById("injectPage")?.click(), 120);
+        }
+    }
+
+    document.getElementById("netToTester")?.addEventListener("click", () => {
+        sendNetEntryToTester(networkEntries[selectedNetIndex], false);
+    });
+
+    document.getElementById("netReplay")?.addEventListener("click", () => {
+        sendNetEntryToTester(networkEntries[selectedNetIndex], true);
+    });
+
+    document.getElementById("netCopyCurl")?.addEventListener("click", () => {
+        const e = networkEntries[selectedNetIndex];
+        if (!e) { log(typeof t === "function" ? t("net.noRequestSelected") : "No request selected"); return; }
+        const parts = ["curl", "-k", "-s", "-X", e.method];
+        parts.push("'" + e.url.replace(/'/g, "'\\''") + "'");
+        (e.reqHeaders || "").split("\n").forEach(line => {
+            line = line.trim();
+            if (!line || !line.includes(":") || line === "(none)") return;
+            parts.push("-H", "'" + line.replace(/'/g, "'\\''") + "'");
+        });
+        if (e.reqBody && e.method !== "GET" && e.method !== "HEAD") {
+            parts.push("--data-binary", "'" + e.reqBody.replace(/'/g, "'\\''") + "'");
+        }
+        const cmd = parts.join(" ");
+        navigator.clipboard.writeText(cmd).then(() => log("cURL kopiert (" + cmd.length + " Zeichen)"))
+            .catch(err => log("cURL Copy fehlgeschlagen: " + err.message));
+    });
+
+    document.getElementById("netCopyParams")?.addEventListener("click", () => {
+        const e = networkEntries[selectedNetIndex];
+        if (!e) { log(typeof t === "function" ? t("net.noRequestSelected") : "No request selected"); return; }
+        const params = getParamsForEntry(e);
+        if (!params.length) { log(typeof t === "function" ? t("net.noParamsForRequest") : "No parameters for this request."); return; }
+        const lines = params.map(p => p.name + "=" + (p.value || ""));
+        navigator.clipboard.writeText(lines.join("\n")).then(() => {
+            log((typeof t === "function" ? t("net.paramsCopied") : "Params copied:") + " " + params.length);
+        }).catch(err => log("Copy failed: " + err.message));
+    });
+
 
 
     // =====================================================================
@@ -1764,17 +1950,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
 
     // =====================================================================
-    // 2) NETWORK PARAMETER AGGREGATOR
+    // 2) NETWORK PARAMETER AGGREGATOR (mit Request-Zugehörigkeit)
     // =====================================================================
     const netParamMap = new Map();
 
     function collectParamsFromEntry(entry) {
         if (!entry) return;
-
+        const rid = entry._id;
+        let pathHint = "";
         try {
             const u = new URL(entry.url);
+            pathHint = entry.method + " " + u.pathname;
             u.searchParams.forEach((v, k) => {
-                upsertNetParam(k, v, "query", entry.method + " " + u.pathname);
+                upsertNetParam(k, v, "query", pathHint, rid, entry.url);
             });
         } catch (e) {}
 
@@ -1783,7 +1971,7 @@ window.addEventListener("DOMContentLoaded", () => {
             if (body.includes("=") && !body.trim().startsWith("{") && !body.trim().startsWith("[")) {
                 try {
                     const sp = new URLSearchParams(body);
-                    sp.forEach((v, k) => upsertNetParam(k, v, "body", entry.method + " body"));
+                    sp.forEach((v, k) => upsertNetParam(k, v, "body", entry.method + " body", rid, entry.url));
                 } catch (e) {
                     body.split("&").forEach(part => {
                         const eq = part.indexOf("=");
@@ -1791,7 +1979,7 @@ window.addEventListener("DOMContentLoaded", () => {
                             try {
                                 const k = decodeURIComponent(part.slice(0, eq).replace(/\+/g, " "));
                                 const v = decodeURIComponent(part.slice(eq + 1).replace(/\+/g, " "));
-                                upsertNetParam(k, v, "body", entry.method + " body");
+                                upsertNetParam(k, v, "body", entry.method + " body", rid, entry.url);
                             } catch (e2) {}
                         }
                     });
@@ -1802,7 +1990,7 @@ window.addEventListener("DOMContentLoaded", () => {
                     const obj = JSON.parse(body);
                     collectJsonKeys(obj, "", (path, val) => {
                         const leaf = path.split(".").pop() || path;
-                        upsertNetParam(leaf, typeof val === "object" ? JSON.stringify(val) : String(val), "json", "JSON " + path);
+                        upsertNetParam(leaf, typeof val === "object" ? JSON.stringify(val) : String(val), "json", "JSON " + path, rid, entry.url);
                     });
                 } catch (e) {}
             }
@@ -1817,18 +2005,18 @@ window.addEventListener("DOMContentLoaded", () => {
                     if (eq > 0) {
                         const n = part.slice(0, eq).trim();
                         const v = part.slice(eq + 1).trim();
-                        if (n) upsertNetParam(n, v, "cookie", "Cookie header");
+                        if (n) upsertNetParam(n, v, "cookie", "Cookie header", rid, entry.url);
                     }
                 });
             }
             const hm = line.match(/^\s*(X-[\w-]+|Authorization|Api-Key|X-Api-Key|X-Auth-Token)\s*:\s*(.+)$/i);
             if (hm) {
-                upsertNetParam(hm[1].trim(), hm[2].trim().substring(0, 60), "header", "Request header");
+                upsertNetParam(hm[1].trim(), hm[2].trim().substring(0, 60), "header", "Request header", rid, entry.url);
             }
         });
     }
 
-    function upsertNetParam(name, value, type, source) {
+    function upsertNetParam(name, value, type, source, requestId, url) {
         if (!name) return;
         name = String(name).trim();
         if (!name) return;
@@ -1837,14 +2025,30 @@ window.addEventListener("DOMContentLoaded", () => {
         if (existing) {
             existing.count = (existing.count || 1) + 1;
             if (value && !existing.value) existing.value = String(value);
+            if (requestId != null) {
+                if (!existing.requestIds) existing.requestIds = new Set();
+                existing.requestIds.add(requestId);
+            }
+            if (url) {
+                if (!existing.urls) existing.urls = new Set();
+                existing.urls.add(url);
+            }
+            // keep last source
+            if (source) existing.source = source;
             return;
         }
+        const requestIds = new Set();
+        if (requestId != null) requestIds.add(requestId);
+        const urls = new Set();
+        if (url) urls.add(url);
         netParamMap.set(key, {
             name,
             value: value != null ? String(value) : "",
             type: type || "query",
             source: source || "",
-            count: 1
+            count: 1,
+            requestIds,
+            urls
         });
     }
 
@@ -1869,24 +2073,45 @@ window.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function shortUrl(u) {
+        if (!u) return "";
+        try {
+            const x = new URL(u);
+            return x.pathname + (x.search ? "?" + x.searchParams.toString().substring(0, 40) : "");
+        } catch (e) {
+            return String(u).substring(0, 50);
+        }
+    }
+
     function renderNetParamList() {
         const box = document.getElementById("netParamList");
         const stats = document.getElementById("netParamStats");
         if (!box) return;
 
         const filter = (document.getElementById("netParamSearch")?.value || "").trim().toLowerCase();
+        const typeFilter = document.getElementById("netParamTypeFilter")?.value || "all";
+        const onlySelected = document.getElementById("netParamOnlySelected")?.checked;
+        const selectedEntry = selectedNetIndex >= 0 ? networkEntries[selectedNetIndex] : null;
+
         let items = Array.from(netParamMap.values());
+        if (typeFilter !== "all") {
+            items = items.filter(p => p.type === typeFilter);
+        }
+        if (onlySelected && selectedEntry && selectedEntry._id != null) {
+            items = items.filter(p => p.requestIds && p.requestIds.has(selectedEntry._id));
+        }
         if (filter) {
             items = items.filter(p =>
                 p.name.toLowerCase().includes(filter) ||
                 (p.value || "").toLowerCase().includes(filter) ||
-                (p.type || "").toLowerCase().includes(filter)
+                (p.type || "").toLowerCase().includes(filter) ||
+                (p.source || "").toLowerCase().includes(filter)
             );
         }
 
         items.sort((a, b) => (b.count || 0) - (a.count || 0) || a.name.localeCompare(b.name));
 
-        if (stats) stats.textContent = "(" + netParamMap.size + (filter ? ", shown " + items.length : "") + ")";
+        if (stats) stats.textContent = "(" + netParamMap.size + (filter || typeFilter !== "all" || onlySelected ? ", shown " + items.length : "") + ")";
 
         if (!items.length) {
             const emptyMsg = netParamMap.size
@@ -1898,11 +2123,25 @@ window.addEventListener("DOMContentLoaded", () => {
 
         box.innerHTML = items.map((p) => {
             const val = p.value ? escapeHtml(String(p.value).substring(0, 36)) : "";
-            return '<div class="param-item">' +
+            const reqCount = p.requestIds ? p.requestIds.size : 0;
+            // show affiliation: source + number of linked requests
+            let srcLabel = p.source || "";
+            if (reqCount > 1) srcLabel += " · " + reqCount + " reqs";
+            // first linked URL short
+            let linkHint = "";
+            if (p.urls && p.urls.size) {
+                const first = p.urls.values().next().value;
+                linkHint = shortUrl(first);
+            }
+            const title = escapeHtml([p.source, linkHint, reqCount + " request(s)"].filter(Boolean).join(" | "));
+            return '<div class="param-item" title="' + title + '">' +
                 '<span class="param-badge ' + p.type + '">' + escapeHtml(p.type) + '</span>' +
                 '<span class="param-name">' + escapeHtml(p.name) + '</span>' +
                 '<span class="param-val" title="' + escapeHtml(p.value || "") + '">' + val + '</span>' +
-                '<span class="param-src">' + escapeHtml((p.source || "") + (p.count > 1 ? " ×" + p.count : "")) + '</span>' +
+                '<span class="param-src netp-goto" data-rid="' + (p.requestIds && p.requestIds.size ? [...p.requestIds][0] : "") + '" style="cursor:pointer;text-decoration:underline dotted" title="Zum Request springen">' +
+                    escapeHtml(srcLabel || linkHint || "") +
+                    (p.count > 1 && reqCount <= 1 ? " ×" + p.count : "") +
+                '</span>' +
                 '<button class="btn-secondary netp-url" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "1") + '">URL</button>' +
                 '<button class="btn-secondary netp-body" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "1") + '">Body</button>' +
                 '<button class="btn-secondary netp-pl" data-name="' + escapeHtml(p.name) + '" data-val="' + escapeHtml(p.value || "") + '">PL</button>' +
@@ -1910,21 +2149,42 @@ window.addEventListener("DOMContentLoaded", () => {
         }).join("");
 
         box.querySelectorAll(".netp-url").forEach(btn => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
                 appendParamToUrl(btn.dataset.name, btn.dataset.val || "1");
                 log("Net-Param → URL: " + btn.dataset.name);
             });
         });
         box.querySelectorAll(".netp-body").forEach(btn => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
                 appendParamToBody(btn.dataset.name, btn.dataset.val || "1");
                 log("Net-Param → Body: " + btn.dataset.name);
             });
         });
         box.querySelectorAll(".netp-pl").forEach(btn => {
-            btn.addEventListener("click", () => {
+            btn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
                 if (customPayload) customPayload.value = btn.dataset.name + "=" + (btn.dataset.val || "");
                 log("Net-Param → Payload: " + btn.dataset.name);
+            });
+        });
+        // Klick auf Source → zum Request springen
+        box.querySelectorAll(".netp-goto").forEach(el => {
+            el.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                const rid = parseInt(el.dataset.rid, 10);
+                if (!rid) return;
+                const idx = networkEntries.findIndex(e => e._id === rid);
+                if (idx < 0) { log("Request nicht mehr in Liste"); return; }
+                selectedNetIndex = idx;
+                showNetworkDetails(idx);
+                renderNetworkList();
+                renderSelectedRequestParams();
+                // scroll request into view
+                const item = networkList?.querySelector(`.network-item[data-idx="${idx}"]`);
+                if (item) item.scrollIntoView({ block: "nearest" });
+                log((typeof t === "function" ? t("net.jumpedToRequest") : "Jumped to request") + " (#" + rid + ")");
             });
         });
     }
@@ -1932,10 +2192,14 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("clearNetParams")?.addEventListener("click", () => {
         netParamMap.clear();
         renderNetParamList();
+        renderSelectedRequestParams();
+        renderNetworkList();
         log("Network-Parameter geleert");
     });
 
     document.getElementById("netParamSearch")?.addEventListener("input", () => renderNetParamList());
+    document.getElementById("netParamTypeFilter")?.addEventListener("change", () => renderNetParamList());
+    document.getElementById("netParamOnlySelected")?.addEventListener("change", () => renderNetParamList());
 
 
     // =====================================================================
