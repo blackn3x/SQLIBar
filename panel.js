@@ -25,7 +25,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // ======================
     // UPDATE CHECK
     // ======================
-    const ADDON_VERSION = "1.0.0"; // <-- aktuelle Version hier pflegen
+    const ADDON_VERSION = "1.0.1"; // <-- aktuelle Version hier pflegen
     // JSON z.B. auf GitHub Raw: { "version": "1.3.0", "url": "https://..." }
     const UPDATE_URL = "https://raw.githubusercontent.com/blackn3x/SQLIBar/refs/heads/main/version.json";
 
