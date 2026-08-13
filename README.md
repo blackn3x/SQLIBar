@@ -1,3 +1,4 @@
+<img width="1983" height="793" alt="daDAD" src="https://github.com/user-attachments/assets/16e3e21e-e6b5-421e-bc64-c52eaed67c26" />
 
 # SQLiBar – Pentesting & SQLi Toolkit
 
