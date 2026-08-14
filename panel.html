@@ -283,16 +283,20 @@ X-Forwarded-For: 127.0.0.1"></textarea>
             <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
                 <button id="netCopyUrl" class="btn-secondary" data-i18n="net.copyUrl">URL kopieren</button>
                 <button id="netToTester" class="btn-primary" data-i18n="net.toTester" data-i18n-title="net.toTester" title="→ Tester">→ Tester</button>
-                <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="Create cURL">cURL</button>
+                <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="Create cURL">@cURL</button>
                 <button id="netCopyParams" class="btn-secondary" data-i18n="net.copyParams" data-i18n-title="net.copyParams" title="Params kopieren">Params kopieren</button>
                 <button id="netReplay" class="btn-secondary" data-i18n="net.replay" data-i18n-title="net.replay" title="↻ Replay">↻ Replay</button>
             </div>
+            <!-- Request + Response Details (bei Klick auf einen Network-Eintrag) -->
+
         </section>
 
-        <section class="section">
-            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
-                <label style="margin:0"><span data-i18n="net.params">Gesammelte Parameter</span> <span id="netParamStats"></span></label>
-                <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <details class="section">
+            <summary>
+                <span data-i18n="net.params">Gesammelte Parameter</span> <span id="netParamStats"></span>
+            </summary>
+            <div style="padding-top:1px">
+                <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
                     <select id="netParamTypeFilter" style="width:100px;font-size:11px">
                         <option value="all" data-i18n="net.allTypes">Alle Typen</option>
                         <option value="query">query</option>
@@ -307,15 +311,12 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     <input id="netParamSearch" type="text" data-i18n-placeholder="net.filterParams" placeholder="Parameter filtern…" style="width:110px">
                     <button id="clearNetParams" class="btn-secondary" style="font-size:11px;padding:3px 8px" data-i18n="net.clear">Leeren</button>
                 </div>
+                <div id="netParamList" class="param-list">
+                    <div class="param-empty" data-i18n="net.paramsEmpty">Parameter aus erfassten Requests erscheinen hier automatisch.</div>
+                </div>
             </div>
-            <div id="netParamList" class="param-list">
-                <div class="param-empty" data-i18n="net.paramsEmpty">Parameter aus erfassten Requests erscheinen hier automatisch.</div>
-            </div>
-        </section>
-        <section class="section">
-            <label data-i18n="net.details">Request-Details</label>
-            <pre id="networkDetails" class="response-view" data-i18n-placeholder="net.detailsPlaceholder" data-placeholder="Click a request above to inspect headers & body"></pre>
-        </section>
+        </details>
+        <pre id="networkDetails" class="network-details" style="display:none;margin-top:10px;max-height:380px;overflow:auto;padding:10px 12px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all;background:var(--bg-input,#0d1510);border:1px solid var(--border,#1a2f25);border-radius:6px"></pre>
     </div>
     <!-- ===================== TAB 3: Tools ===================== -->
     <div id="tools" class="tab-content">
@@ -445,6 +446,13 @@ X-Forwarded-For: 127.0.0.1"></textarea>
     <script src="i18n.js"></script>
     <script src="encoder.js"></script>
     <script src="presets.js"></script>
+    <script src="utils.js"></script>
+    <script src="sqli-detect.js"></script>
+    <script src="response-view.js"></script>
+    <script src="params.js"></script>
+    <script src="network.js"></script>
+    <script src="theme.js"></script>
+    <script src="tester.js"></script>
     <script src="panel.js"></script>
 </body>
 </html>

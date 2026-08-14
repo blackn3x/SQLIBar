@@ -1,5 +1,3 @@
-<img width="1983" height="793" alt="daDAD" src="https://github.com/user-attachments/assets/16e3e21e-e6b5-421e-bc64-c52eaed67c26" />
-
 # SQLiBar – Pentesting & SQLi Toolkit
 
 **A Firefox Developer Tools extension** for security testing, real-time SQL injection pattern detection, request manipulation, parameter discovery, payload encoding, and multi-language UI support.
@@ -7,7 +5,6 @@
 Designed for security researchers, penetration testers, and web developers who want to analyze parameters, craft HTTP requests, and test for SQL injection vulnerabilities directly from the browser.
 
 > **Disclaimer:** SQLiBar is strictly intended for **authorized** security testing, educational purposes, and vulnerability research on systems you own or have explicit permission to test. Unauthorized use against third-party systems is illegal.
-<img width="2322" height="942" alt="screenshot" src="https://github.com/user-attachments/assets/43b9d18b-01bb-49a7-bc8f-89d817949f8f" />
 
 ---
 
@@ -30,7 +27,6 @@ Designed for security researchers, penetration testers, and web developers who w
 - Automatic extraction of parameters from headers, query strings, URL-encoded bodies, and nested JSON
 - Inspect request/response headers, bodies, and previews
 - Filter by All / XHR / Documents / POST; search by URL or method
-<img width="2342" height="650" alt="Screenshot 2026-08-09 122918" src="https://github.com/user-attachments/assets/f9c9b529-fa7e-44b3-bf27-3c0673815021" />
 
 ### Payload Presets & Request Manipulation
 - Built-in payload preset manager with dynamic column generator for UNION-based tests
@@ -50,14 +46,13 @@ URL, Double URL, Base64, Base64 URL-Safe, Hex (spaced / `0x` / `\x`), ASCII/Deci
 ### Themes & Localization
 - Color schemes: Neon Green, Cyber Cyan, Violet, Amber, Hot Pink, Electric Blue, Matrix Lime, Mono + custom accent
 - UI languages: **Deutsch**, **English**, **Español**, **Русский**, **中文** (preference saved)
-<img width="1925" height="635" alt="Screenshot 2026-08-09 122704" src="https://github.com/user-attachments/assets/15f7081b-9782-441b-bad1-d0e0d8d53274" />
 
 ---
 
 ## Installation
 
 ### Firefox Add-ons (recommended)
-Install from [addons.mozilla.org](https://addons.mozilla.org/de/firefox/addon/sqlibar/).
+Install from [addons.mozilla.org](https://addons.mozilla.org) (link once published).
 
 ### Temporary load (development)
 1. Open `about:debugging#/runtime/this-firefox`
