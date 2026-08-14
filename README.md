@@ -1,90 +1,130 @@
 # SQLiBar – Pentesting & SQLi Toolkit
 
-**A Firefox Developer Tools extension** for security testing, real-time SQL injection pattern detection, request manipulation, parameter discovery, payload encoding, and multi-language UI support.
+**A Firefox Developer Tools extension** for authorized security testing: real-time SQL injection pattern detection, live network capture, parameter discovery, request crafting, payload encoding, and multi-language UI.
 
-Designed for security researchers, penetration testers, and web developers who want to analyze parameters, craft HTTP requests, and test for SQL injection vulnerabilities directly from the browser.
+Built for security researchers, penetration testers, and developers who analyze parameters, manipulate HTTP requests, and test for SQL injection directly in the browser.
 
-> **Disclaimer:** SQLiBar is strictly intended for **authorized** security testing, educational purposes, and vulnerability research on systems you own or have explicit permission to test. Unauthorized use against third-party systems is illegal.
+> **Disclaimer:** SQLiBar is strictly for **authorized** security testing, education, and research on systems you own or have explicit permission to test. Unauthorized use against third-party systems is illegal.
 
 ---
 
 ## Features
 
-### SQL Injection Detection & Pattern Analysis
-- Automated response analysis against **100+** database-specific error patterns  
-  (MySQL, MariaDB, PostgreSQL, MSSQL, Oracle, SQLite, DB2, Sybase, Access, H2, Firebird, and common ORMs: PDO, SQLAlchemy, Django, Laravel, Hibernate, Entity Framework, Prisma, …)
-- **Baseline comparison** – set response length and timing baselines to catch Boolean-, Union-, Error-, and Time-based anomalies
-- **Reflection detection** – highlights payload fragments that appear in the response
-- **Diff view** – line-based comparison against the stored baseline body
-- Visual severity indicators (high / medium / low) with code snippet context
+### SQL Injection Detection & Analysis
+- Automated response analysis against **100+** database- and ORM-specific error patterns  
+  (MySQL, MariaDB, PostgreSQL, MSSQL, Oracle, SQLite, DB2, Sybase, Access/JET, H2, HSQLDB, Derby, Firebird, plus PDO, SQLAlchemy, Django, Laravel/Eloquent, Hibernate/JPA, Entity Framework, Prisma, Sequelize, TypeORM, Rails ActiveRecord, Node `mysql`/`pg`, Python DB-API, ASP.NET SqlClient, …)
+- Multi-language error phrases (EN / DE / FR / ES)
+- **Baselines**
+  - Length baseline (Boolean / UNION / error-based deltas)
+  - Time baseline (SLEEP / BENCHMARK / `pg_sleep` / `WAITFOR DELAY`)
+  - Full body baseline for line-level **diff**
+- **Reflection detection** – payload fragments found in the response (with context)
+- Severity badges (high / medium / low) with matched snippet
+- Summary stats on the detection panel (status, length Δ, time Δ, hit count)
 
-### Smart Page Parameter Scanner
-- Scans the current page DOM for form fields, hidden inputs, URL query parameters, link parameters, `data-*` attributes, and cookies
-- Push discovered parameters to URL query, request body, or payload field with one click
+### Live Network Monitor
+- Real-time capture of HTTP / XHR / Fetch / document requests via DevTools Network API
+- Filters: All · XHR/Fetch · Documents · POST only · free-text search
+- Per-request view:
+  - Method, status, type, timestamp
+  - Inline parameter count & expandable param list
+  - **Request headers + body**
+  - **Response headers + body** (preview up to ~12 KB)
+- Actions: copy URL · copy cURL · copy params · send to Tester · Replay
+- Parameter aggregator across all captured requests (query / body / JSON / cookie / header) with type filter, search, and “only selected request”
 
-### Live Network Capture & Parameter Aggregator
-- Real-time monitoring of HTTP / XHR / Fetch requests
-- Automatic extraction of parameters from headers, query strings, URL-encoded bodies, and nested JSON
-- Inspect request/response headers, bodies, and previews
-- Filter by All / XHR / Documents / POST; search by URL or method
+### Page Parameter Scanner
+- DOM scan for:
+  - Form fields & standalone inputs
+  - Hidden inputs
+  - URL query parameters
+  - Link query parameters
+  - Common `data-*` attributes
+  - Cookies
+- One-click push to URL query, request body, or payload field
 
-### Payload Presets & Request Manipulation
-- Built-in payload preset manager with dynamic column generator for UNION-based tests
-- Interactive JSON body tree for nested keys
-- Custom HTTP header injector (X-Forwarded-For, Authorization, Host rewrite, cookies, …)
-- Method selection (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS), body editor, optional navigation
-- One-click **cURL** export
+### Request Builder / Tester
+- URL field with load-current, copy, cURL export
+- Method: GET · POST · PUT · PATCH · DELETE · HEAD · OPTIONS
+- Custom headers (presets for IP/proxy, host rewrite, auth, content, language, exotic)
+- Live headers from page · last network request headers
+- Body editor with JSON / form-urlencoded Content-Type toggles
+- **JSON nested key explorer** – click path → payload / URL / copy path
+- Optional: send cookies, set cookies via background, navigate after request
+- Response viewer with:
+  - Syntax highlighting (JSON & HTML)
+  - Search (case-sensitive, prev/next)
+  - Copy full response or body only
+- SQLi detection runs automatically on every Tester response
 
-### Response Viewer
-- Syntax highlighting for **JSON** and **HTML** bodies
-- In-response search (case-sensitive, next/previous)
-- Copy full response or body only
+### Payload Presets
+- Categorized preset library
+- Dynamic **UNION** column generator (`1,2,3…` or `NULL,NULL…`)
+- Apply at cursor position in the URL field
+- Custom payload field + Apply
 
-### Multi-Format Encoder / Decoder
-URL, Double URL, Base64, Base64 URL-Safe, Hex (spaced / `0x` / `\x`), ASCII/Decimal, SQL `CHAR()`, Unicode (`\u` & `%u`), HTML Entities, JSON, JWT Decode, ROT13, Binary
+### Encoder / Decoder
+- **URL** · Double · Triple · Selective (SQLi-oriented)
+- **Base64** · Base64 URL-safe
+- **Hex** (spaced · `0xAABB` · `\x` · comma-separated) · Binary · ASCII/Decimal
+- **SQL** `CHAR(65,66)` · `CHAR(0x41,…)` · `CONCAT(CHAR…)`
+- **Unicode** `\u` · `%u` · Fullwidth
+- HTML entities · JSON string · JWT decode · ROT13
+- Optional second-stage chain + live encode
+- Send result → Payload · URL (at cursor) · Body
 
 ### Themes & Localization
-- Color schemes: Neon Green, Cyber Cyan, Violet, Amber, Hot Pink, Electric Blue, Matrix Lime, Mono + custom accent
-- UI languages: **Deutsch**, **English**, **Español**, **Русский**, **中文** (preference saved)
+- Schemes: Neon Green, Cyber Cyan, Violet, Amber, Hot Pink, Electric Blue, Matrix Lime, Mono White + **custom accent**
+- Preference persisted in `localStorage`
+- UI languages: **English**, **Deutsch**, **Español**, **Français**, **Português**, **Русский**, **日本語**, **中文**
+
+### Other
+- In-panel update check against GitHub `version.json`
+- Toast / status feedback for important actions
+- Modular architecture (optional split: `network.js`, `params.js`, `sqli-detect.js`, `response-view.js`, `tester.js`, `utils.js`, …) or single `panel.js`
 
 ---
 
 ## Installation
 
-### Firefox Add-ons (recommended)
-Install from [addons.mozilla.org](https://addons.mozilla.org) (link once published).
-
 ### Temporary load (development)
 1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on…**
+2. **Load Temporary Add-on…**
 3. Select the extension’s `manifest.json`
 
 ### From GitHub Releases
 1. Download the latest `.xpi` from [Releases](../../releases)
-2. Open `about:addons` → gear icon → **Install Add-on From File…**
+2. `about:addons` → gear → **Install Add-on From File…**
 3. Select the `.xpi`
+
+### Firefox Add-ons (when published)
+Install from [addons.mozilla.org](https://addons.mozilla.org) (link once available).
 
 ---
 
 ## Permissions
 
-| Permission   | Reason |
-|--------------|--------|
-| `devtools`   | Native panel inside Firefox Developer Tools |
-| `webRequest` | Capture live network traffic and response metadata |
-| `cookies`    | Read/set cookies for authenticated testing |
-| `activeTab`  | Interact with the currently inspected tab |
+| Permission    | Reason |
+|---------------|--------|
+| `devtools`    | Native panel inside Firefox Developer Tools |
+| `webRequest` / network | Live capture of requests and response metadata |
+| `cookies`     | Read/set cookies for authenticated testing |
+| `activeTab`   | Interact with the currently inspected tab |
+| (host / fetch as needed) | Background fetch for Tester “Open” without panel CORS limits |
+
+Exact keys depend on `manifest.json` (MV2/MV3).
 
 ---
 
 ## Usage (quick start)
 
-1. Open DevTools on the target page → **SQLiBar** panel  
-2. **Load current** URL or paste a target  
-3. **Scan Page** or use **Live Network** to discover parameters  
-4. Pick a payload preset (or write your own) → **Apply**  
-5. **Open** to send the request; check **SQLi Detection** for error patterns, length/time deltas, reflection, and diff  
-6. Use **Encode** tab for encoding/decoding; **Options** for theme and language  
+1. Open DevTools on the target → **SQLiBar** panel  
+2. **Load current URL** or paste a target  
+3. **Scan Page** and/or use **Live Network** to discover parameters  
+4. Click a network entry → inspect **Request + Response** (headers & body)  
+5. Choose a payload preset (or custom) → **Apply** into the URL  
+6. **Open** to send; review **SQLi Detection** (hits, length/time Δ, reflection, diff)  
+7. **Encode** tab for encoding/decoding; **Options** for theme & language  
 
 ---
 
@@ -93,38 +133,48 @@ Install from [addons.mozilla.org](https://addons.mozilla.org) (link once publish
 ```text
 SQLiBar/
 ├── manifest.json
-├── panel.html
-├── panel.js
+├── panel.html              # UI shell (tabs: Tester, Live Network, Encode, Options)
+├── panel.js                # Orchestration / monolithic entry (or thin loader)
+├── network.js              # Live network list + details + cURL/params actions
+├── params.js               # Page scanner + network param aggregator + JSON explorer
+├── sqli-detect.js          # Patterns, baselines, reflection, diff
+├── response-view.js        # Highlighted response + search + copy
+├── tester.js               # URL/payloads/headers/inject/cURL/encode UI wiring
+├── utils.js                # log, toast, escapeHtml, helpers
 ├── i18n.js
 ├── encoder.js
 ├── presets.js
+├── theme.js                # (if split)
 ├── styles.css
-├── background.js          # if present
-├── icons/
+├── background.js           # fetchUrl, setCookies, inject helpers
+├── icons/                  # e.g. 48 / 96 / 128
 ├── LICENSE
 └── README.md
 ```
+
+Module boundaries may vary between releases (monolithic `panel.js` vs. split modules).
 
 ---
 
 ## Contributing
 
-Contributions are welcome, especially:
+Contributions welcome, especially:
 - Additional SQLi error patterns / fingerprints
 - New payload presets
 - Translations and i18n fixes
-- Bug reports and UI improvements
+- Network/response UX improvements
+- Bug reports
 
-Open an issue or pull request. Please keep changes focused and describe the motivation.
+Open an issue or pull request. Keep changes focused and describe the motivation.
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License** – see [LICENSE](LICENSE).
+**MIT License** – see [LICENSE](LICENSE).
 
 ---
 
-## Disclaimer (again)
+## Disclaimer
 
 Use SQLiBar only on systems you own or are explicitly authorized to test. The authors are not responsible for misuse or damage resulting from the use of this tool.
