@@ -237,6 +237,19 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                         <button id="clearBaselineBtn" class="btn-secondary" data-i18n="sqli.clearBaselines">Baselines löschen</button>
                         <span id="baselineInfo"></span>
                     </div>
+                    <!-- Boolean Blind Mini-Test -->
+                    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap;align-items:center">
+                        <span style="font-size:12px;color:#888;font-weight:500" data-i18n="sqli.boolTitle">Boolean-Test:</span>
+                        <input id="boolTrueExpr" type="text" value=" AND 1=1" title="True-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolTrueTitle">
+                        <input id="boolFalseExpr" type="text" value=" AND 1=2" title="False-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolFalseTitle">
+                        <select id="boolInjectMode" style="font-size:11px;width:130px" title="Wohin injizieren">
+                            <option value="lastparam" data-i18n="sqli.boolLastParam">Letzter Param</option>
+                            <option value="payload" data-i18n="sqli.boolPayload">Payload-Feld</option>
+                            <option value="append" data-i18n="sqli.boolAppend">URL anhängen</option>
+                        </select>
+                        <button id="boolTestBtn" class="btn-primary" style="font-size:11px" data-i18n="sqli.boolRun">True vs False ▶</button>
+                    </div>
+                    <div id="boolTestResult" style="margin-top:8px;display:none"></div>
                     <div id="reflectionBox" style="margin-top:8px;display:none"></div>
                     <div id="diffBox" style="margin-top:8px;display:none"></div>
                 </div>

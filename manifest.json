@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SQLiBar",
-  "version": "1.0.2.1",
+  "version": "1.0.3",
   "browser_specific_settings": {
     "gecko": {
       "id": "SQLIBar@bLackn3x",

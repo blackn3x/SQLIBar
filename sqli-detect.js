@@ -382,6 +382,281 @@ function renderDiff(text) {
 
 
 
+    // ── Boolean Blind Mini-Test ──────────────────────────────────────────
+    function simpleHash(str) {
+        let h = 0;
+        const s = String(str || "");
+        for (let i = 0; i < s.length; i++) {
+            h = ((h << 5) - h) + s.charCodeAt(i);
+            h |= 0;
+        }
+        return (h >>> 0).toString(16);
+    }
+
+    function injectIntoUrl(url, expr) {
+        try {
+            const u = new URL(url);
+            const keys = [...u.searchParams.keys()];
+            if (keys.length) {
+                const last = keys[keys.length - 1];
+                u.searchParams.set(last, (u.searchParams.get(last) || "") + expr);
+                return u.toString();
+            }
+        } catch (e) { /* fallthrough */ }
+        const sep = url.includes("?") ? "&" : "?";
+        return url + sep + "x=" + encodeURIComponent("1" + expr);
+    }
+
+    function injectIntoBody(body, expr) {
+        if (!body) return "x=1" + expr;
+        if (body.trim().startsWith("{")) {
+            try {
+                const obj = JSON.parse(body);
+                if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+                    const keys = Object.keys(obj);
+                    if (keys.length) {
+                        const last = keys[keys.length - 1];
+                        obj[last] = String(obj[last] ?? "") + expr;
+                    } else {
+                        obj.x = "1" + expr;
+                    }
+                    return JSON.stringify(obj);
+                }
+            } catch (e) { /* fallthrough */ }
+        }
+        const parts = body.split("&");
+        if (parts.length && parts[0].includes("=")) {
+            const last = parts[parts.length - 1];
+            const eq = last.indexOf("=");
+            if (eq >= 0) {
+                parts[parts.length - 1] = last.slice(0, eq + 1) + last.slice(eq + 1) + expr;
+                return parts.join("&");
+            }
+        }
+        return body + expr;
+    }
+
+    function buildBoolVariants(trueExpr, falseExpr, mode) {
+        const baseUrl = (document.getElementById("urlInput")?.value || "").trim();
+        const baseBody = (document.getElementById("testerBody")?.value || "").trim();
+        const method = (document.getElementById("testerMethod")?.value || "GET").toUpperCase();
+        const payload = (document.getElementById("customPayload")?.value || "").trim();
+
+        if (!baseUrl) return { error: "Keine URL vorhanden" };
+
+        function applyPayloadMode(expr) {
+            const pl = (payload || "1") + expr;
+            try {
+                const u = new URL(baseUrl);
+                const keys = [...u.searchParams.keys()];
+                if (keys.length) {
+                    u.searchParams.set(keys[keys.length - 1], pl);
+                    return { url: u.toString(), body: baseBody };
+                }
+                u.searchParams.set("id", pl);
+                return { url: u.toString(), body: baseBody };
+            } catch (e) {
+                return {
+                    url: baseUrl + (baseUrl.includes("?") ? "&" : "?") + "id=" + encodeURIComponent(pl),
+                    body: baseBody
+                };
+            }
+        }
+
+        let trueUrl, falseUrl, trueBody, falseBody;
+
+        if (mode === "payload") {
+            const t = applyPayloadMode(trueExpr);
+            const f = applyPayloadMode(falseExpr);
+            trueUrl = t.url; falseUrl = f.url;
+            trueBody = t.body; falseBody = f.body;
+        } else if (mode === "append") {
+            trueUrl = baseUrl + trueExpr;
+            falseUrl = baseUrl + falseExpr;
+            trueBody = baseBody;
+            falseBody = baseBody;
+        } else {
+            trueUrl = injectIntoUrl(baseUrl, trueExpr);
+            falseUrl = injectIntoUrl(baseUrl, falseExpr);
+            if (method !== "GET" && method !== "HEAD" && baseBody) {
+                trueBody = injectIntoBody(baseBody, trueExpr);
+                falseBody = injectIntoBody(baseBody, falseExpr);
+            } else {
+                trueBody = baseBody;
+                falseBody = baseBody;
+            }
+        }
+
+        return { trueUrl, falseUrl, trueBody, falseBody, method, baseUrl };
+    }
+
+    function fetchOnce(url, method, body) {
+        const sendHeaders = document.getElementById("optSendHeaders")?.checked ?? true;
+        const sendCookies = document.getElementById("optSendCookies")?.checked ?? true;
+        const headerText = document.getElementById("testerHeaders")?.value || "";
+        const forceJson = document.getElementById("optBodyJson")?.checked ?? false;
+        const forceForm = document.getElementById("optBodyForm")?.checked ?? false;
+
+        const headers = {};
+        if (sendHeaders) {
+            headerText.split("\n").forEach(line => {
+                const parts = line.split(":");
+                if (parts.length > 1) {
+                    const key = parts.shift().trim();
+                    if (key && key.toLowerCase() !== "cookie") headers[key] = parts.join(":").trim();
+                }
+            });
+        }
+        const hasCT = Object.keys(headers).some(k => k.toLowerCase() === "content-type");
+        if (body && !hasCT && method !== "GET" && method !== "HEAD") {
+            if (forceJson || body.trim().startsWith("{") || body.trim().startsWith("[")) {
+                headers["Content-Type"] = "application/json";
+            } else {
+                headers["Content-Type"] = "application/x-www-form-urlencoded";
+            }
+        }
+
+        return new Promise((resolve) => {
+            try {
+                browser.runtime.sendMessage(
+                    {
+                        action: "fetchUrl",
+                        url,
+                        method,
+                        headers,
+                        body: (body && method !== "GET" && method !== "HEAD") ? body : undefined,
+                        credentials: sendCookies ? "include" : "omit"
+                    },
+                    (r) => {
+                        if (browser.runtime.lastError) {
+                            resolve({ ok: false, error: browser.runtime.lastError.message });
+                            return;
+                        }
+                        resolve(r || { ok: false, error: "Empty response" });
+                    }
+                );
+            } catch (e) {
+                resolve({ ok: false, error: String(e && e.message || e) });
+            }
+        });
+    }
+
+    function renderBoolResult(trueRes, falseRes, meta) {
+        const box = document.getElementById("boolTestResult");
+        if (!box) return;
+
+        const tLen = (trueRes.body || "").length;
+        const fLen = (falseRes.body || "").length;
+        const tMs = trueRes.ms || 0;
+        const fMs = falseRes.ms || 0;
+        const tSt = trueRes.status || "-";
+        const fSt = falseRes.status || "-";
+        const tHash = simpleHash(trueRes.body || "");
+        const fHash = simpleHash(falseRes.body || "");
+
+        const lenDiff = tLen - fLen;
+        const timeDiff = tMs - fMs;
+        const statusDiff = String(tSt) !== String(fSt);
+        const bodyDiff = tHash !== fHash;
+        const significantLen = Math.abs(lenDiff) >= 20;
+        const significantTime = Math.abs(timeDiff) >= 400;
+        const likely = significantLen || statusDiff || significantTime || (bodyDiff && Math.abs(lenDiff) >= 5);
+
+        let verdictColor = likely ? "#fbbf24" : "#4ade80";
+        let verdictText = likely
+            ? (typeof t === "function" ? t("sqli.boolLikely") : "Unterschied erkannt → Boolean-Blind möglich")
+            : (typeof t === "function" ? t("sqli.boolSame") : "True ≈ False → kein klarer Boolean-Unterschied");
+
+        if (!trueRes.ok || !falseRes.ok) {
+            verdictColor = "#f87171";
+            verdictText = "Request fehlgeschlagen: " +
+                (!trueRes.ok ? ("True: " + (trueRes.error || "?")) : "") +
+                (!falseRes.ok ? (" False: " + (falseRes.error || "?")) : "");
+        }
+
+        box.innerHTML =
+            `<div style="padding:8px 10px;border:1px solid var(--border,#1a2f25);border-radius:6px;background:var(--bg-input,#0d1510)">` +
+            `<div style="font-size:12px;margin-bottom:6px;color:${verdictColor};font-weight:600">${escapeHtml(verdictText)}</div>` +
+            `<div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 12px;font-size:11px;font-family:ui-monospace,monospace">` +
+            `<span style="color:#888"></span><span style="color:#4ade80">TRUE</span><span style="color:#f87171">FALSE</span>` +
+            `<span style="color:#888">Status</span><span>${escapeHtml(String(tSt))}${statusDiff ? ' <b style="color:#fbbf24">≠</b>' : ""}</span><span>${escapeHtml(String(fSt))}</span>` +
+            `<span style="color:#888">Length</span><span>${tLen} B${significantLen ? ` <b style="color:#fbbf24">Δ${lenDiff > 0 ? "+" : ""}${lenDiff}</b>` : ""}</span><span>${fLen} B</span>` +
+            `<span style="color:#888">Time</span><span>${tMs} ms${significantTime ? ` <b style="color:#fbbf24">Δ${timeDiff > 0 ? "+" : ""}${timeDiff}</b>` : ""}</span><span>${fMs} ms</span>` +
+            `<span style="color:#888">Body</span><span style="color:#888">${bodyDiff ? "!=" : "=="} #${tHash.slice(0, 6)}</span><span style="color:#888">#${fHash.slice(0, 6)}</span>` +
+            `</div>` +
+            `<div style="margin-top:6px;font-size:10px;color:#666;word-break:break-all">` +
+            `T: ${escapeHtml((meta.trueUrl || "").substring(0, 140))}${(meta.trueUrl || "").length > 140 ? "…" : ""}<br>` +
+            `F: ${escapeHtml((meta.falseUrl || "").substring(0, 140))}${(meta.falseUrl || "").length > 140 ? "…" : ""}` +
+            `</div></div>`;
+        box.style.display = "block";
+    }
+
+    async function runBooleanTest() {
+        const trueExpr = (document.getElementById("boolTrueExpr")?.value || " AND 1=1-- -").trim();
+        const falseExpr = (document.getElementById("boolFalseExpr")?.value || " AND 1=2-- -").trim();
+        const mode = document.getElementById("boolInjectMode")?.value || "lastparam";
+        const btn = document.getElementById("boolTestBtn");
+        const box = document.getElementById("boolTestResult");
+
+        const variants = buildBoolVariants(trueExpr, falseExpr, mode);
+        if (variants.error) {
+            log(variants.error, "warn");
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "…";
+        }
+        if (box) {
+            box.style.display = "block";
+            box.innerHTML = `<div style="color:#888;font-size:12px">Boolean-Test läuft… True → False</div>`;
+        }
+
+        log("Boolean-Test: True vs False (" + mode + ")");
+
+        try {
+            const trueRes = await fetchOnce(variants.trueUrl, variants.method, variants.trueBody);
+            const falseRes = await fetchOnce(variants.falseUrl, variants.method, variants.falseBody);
+
+            renderBoolResult(trueRes, falseRes, {
+                trueExpr,
+                falseExpr,
+                trueUrl: variants.trueUrl,
+                falseUrl: variants.falseUrl
+            });
+
+            if (trueRes.ok && trueRes.body != null) {
+                analyzeSqliResponse(trueRes.body, trueRes.status, (trueRes.body || "").length, trueRes.ms || 0);
+                if (typeof renderResponseView === "function") {
+                    renderResponseView(
+                        document.getElementById("testerResponse"),
+                        trueRes.status,
+                        trueRes.statusText || "",
+                        trueRes.headers || [],
+                        trueRes.body || ""
+                    );
+                }
+            }
+
+            const tLen = (trueRes.body || "").length;
+            const fLen = (falseRes.body || "").length;
+            const interesting = Math.abs(tLen - fLen) >= 20 || String(trueRes.status) !== String(falseRes.status);
+            log(
+                "Boolean-Test fertig: True " + (trueRes.status || "?") + "/" + tLen + "B vs False " + (falseRes.status || "?") + "/" + fLen + "B",
+                interesting ? "warn" : "success"
+            );
+        } catch (err) {
+            logError(err, "Boolean-Test");
+            if (box) box.innerHTML = `<div style="color:#f87171">Fehler: ${escapeHtml(String(err.message || err))}</div>`;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = typeof t === "function" ? t("sqli.boolRun") : "True vs False ▶";
+            }
+        }
+    }
+
     function initSqliDetect() {
         updateBaselineInfo();
 
@@ -425,9 +700,15 @@ function renderDiff(text) {
             updateBaselineInfo();
             const rb = document.getElementById("reflectionBox");
             const db = document.getElementById("diffBox");
+            const bb = document.getElementById("boolTestResult");
             if (rb) rb.style.display = "none";
             if (db) db.style.display = "none";
+            if (bb) bb.style.display = "none";
             log("Alle Baselines gelöscht");
+        });
+
+        document.getElementById("boolTestBtn")?.addEventListener("click", () => {
+            runBooleanTest();
         });
     }
 
@@ -437,5 +718,6 @@ function renderDiff(text) {
     global.getPayloadNeedles = getPayloadNeedles;
     global.renderReflection = renderReflection;
     global.renderDiff = renderDiff;
+    global.runBooleanTest = runBooleanTest;
 
 })(typeof window !== "undefined" ? window : this);
