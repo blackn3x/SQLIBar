@@ -45,6 +45,7 @@ Built for security researchers, penetration testers, and developers who analyze 
   - Common `data-*` attributes
   - Cookies
 - One-click push to URL query, request body, or payload field
+<img width="2050" height="968" alt="Screenshot 2026-08-09 033516" src="https://github.com/user-attachments/assets/aa96ff3f-07a9-4c6f-9d0f-12c7c9691118" />
 
 ### Request Builder / Tester
 - URL field with load-current, copy, cURL export
