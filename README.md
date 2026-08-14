@@ -1,4 +1,5 @@
 # SQLiBar – Pentesting & SQLi Toolkit
+<img width="1983" height="793" alt="daDAD" src="https://github.com/user-attachments/assets/cafe6347-1521-4cdd-a2dc-b44eaee67702" />
 
 **A Firefox Developer Tools extension** for authorized security testing: real-time SQL injection pattern detection, live network capture, parameter discovery, request crafting, payload encoding, and multi-language UI.
 
@@ -21,6 +22,7 @@ Built for security researchers, penetration testers, and developers who analyze 
 - **Reflection detection** – payload fragments found in the response (with context)
 - Severity badges (high / medium / low) with matched snippet
 - Summary stats on the detection panel (status, length Δ, time Δ, hit count)
+<img width="2042" height="615" alt="Screenshot 2026-08-09 033559" src="https://github.com/user-attachments/assets/427d3544-2067-4c06-9a79-200fbb5972ed" />
 
 ### Live Network Monitor
 - Real-time capture of HTTP / XHR / Fetch / document requests via DevTools Network API
@@ -32,6 +34,7 @@ Built for security researchers, penetration testers, and developers who analyze 
   - **Response headers + body** (preview up to ~12 KB)
 - Actions: copy URL · copy cURL · copy params · send to Tester · Replay
 - Parameter aggregator across all captured requests (query / body / JSON / cookie / header) with type filter, search, and “only selected request”
+<img width="2830" height="882" alt="Screenshot 2026-08-14 122740" src="https://github.com/user-attachments/assets/7f53514e-035a-4b88-9d72-67a5cba94e37" />
 
 ### Page Parameter Scanner
 - DOM scan for:
@@ -72,11 +75,13 @@ Built for security researchers, penetration testers, and developers who analyze 
 - HTML entities · JSON string · JWT decode · ROT13
 - Optional second-stage chain + live encode
 - Send result → Payload · URL (at cursor) · Body
+<img width="2837" height="480" alt="Screenshot 2026-08-14 162927" src="https://github.com/user-attachments/assets/dbeb0e21-789e-4c71-abaf-30b0a696108f" />
 
 ### Themes & Localization
 - Schemes: Neon Green, Cyber Cyan, Violet, Amber, Hot Pink, Electric Blue, Matrix Lime, Mono White + **custom accent**
 - Preference persisted in `localStorage`
 - UI languages: **English**, **Deutsch**, **Español**, **Français**, **Português**, **Русский**, **日本語**, **中文**
+<img width="1925" height="635" alt="Screenshot 2026-08-09 122704" src="https://github.com/user-attachments/assets/0309eccd-8e8e-478f-83c2-01e29a71dce9" />
 
 ### Other
 - In-panel update check against GitHub `version.json`
