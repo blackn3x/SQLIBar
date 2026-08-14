@@ -6,229 +6,7 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         /* Parameter discovery extras */
-        .param-list {
-            max-height: 220px;
-            overflow-y: auto;
-            font-size: 12px;
-            margin-top: 6px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            background: transparent;
-        }
-
-        .param-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 8px;
-            border-bottom: 1px solid #2a2a2a;
-            cursor: default;
-        }
-
-            .param-item:hover {
-                background: #252525;
-            }
-
-            .param-item .param-name {
-                font-family: ui-monospace, monospace;
-                color: #fbbf24;
-                min-width: 100px;
-                word-break: break-all;
-            }
-
-            .param-item .param-src {
-                color: #888;
-                font-size: 11px;
-                flex: 1;
-            }
-
-            .param-item .param-val {
-                color: #94a3b8;
-                font-size: 11px;
-                max-width: 140px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            .param-item button {
-                font-size: 11px;
-                padding: 2px 8px;
-                flex-shrink: 0;
-            }
-
-        .param-badge {
-            display: inline-block;
-            font-size: 10px;
-            padding: 1px 6px;
-            border-radius: 3px;
-            background: #333;
-            color: #aaa;
-            text-transform: uppercase;
-        }
-
-            .param-badge.form {
-                background: #1e3a5f;
-                color: #93c5fd;
-            }
-
-            .param-badge.hidden {
-                background: #4a1c1c;
-                color: #fca5a5;
-            }
-
-            .param-badge.link {
-                background: #1a3a2a;
-                color: #86efac;
-            }
-
-            .param-badge.cookie {
-                background: #3b2a1a;
-                color: #fcd34d;
-            }
-
-            .param-badge.query {
-                background: #2a2a3b;
-                color: #c4b5fd;
-            }
-
-            .param-badge.body {
-                background: transparent;
-                color: #f0abfc;
-            }
-
-            .param-badge.header {
-                background: #1a3b3b;
-                color: #67e8f9;
-            }
-
-            .param-badge.json {
-                background: #3b3b1a;
-                color: #fde047;
-            }
-
-        .param-empty {
-            color: #666;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .json-tree {
-            font-family: ui-monospace, monospace;
-            font-size: 12px;
-            max-height: 180px;
-            overflow: auto;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 6px 8px;
-            margin-top: 4px;
-        }
-
-            .json-tree .jk {
-                color: #fbbf24;
-                cursor: pointer;
-            }
-
-                .json-tree .jk:hover {
-                    text-decoration: underline;
-                    color: #fde68a;
-                }
-
-            .json-tree .jv {
-                color: #94a3b8;
-            }
-
-            .json-tree .jd {
-                color: #666;
-                margin-right: 4px;
-            }
-
-        .json-path-hint {
-            font-size: 11px;
-            color: #888;
-            margin-top: 4px;
-        }
-
-        #pageParamStats, #netParamStats {
-            font-size: 11px;
-            color: #888;
-            margin-left: 8px;
-        }
-
-        /* Inline expand: parameters under selected network request */
-        .network-params-expand {
-            border: 1px solid #333;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            background: #141414;
-            margin: 0 0 4px 0;
-            padding-bottom: 4px;
-        }
-        .network-item.active {
-            border-radius: 4px 4px 0 0;
-        }
-        .network-params-expand .param-item {
-            padding: 3px 8px;
-        }
-        .network-params-expand .param-list {
-            max-height: 180px;
-            overflow-y: auto;
-        }
-        .reflect-hit {
-            background: #7c3aed;
-            color: #fff;
-            padding: 0 3px;
-            border-radius: 2px;
-            font-weight: 600;
-        }
-        .diff-added {
-            background: rgba(34, 197, 94, 0.25);
-            color: #86efac;
-        }
-        .diff-removed {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-            text-decoration: line-through;
-        }
-        #reflectionBox, #diffBox {
-            font-size: 12px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 8px;
-            background: #1a1a1a;
-            max-height: 180px;
-            overflow: auto;
-        }
-        #reflectionBox .ref-title, #diffBox .diff-title {
-            font-size: 11px;
-            color: #aaa;
-            margin-bottom: 4px;
-        }
-
-        /* Syntax highlighting tokens for response body */
-        .tok-html-tag { color: #7dd3fc; }
-        .tok-html-attr { color: #fbbf24; }
-        .tok-html-val { color: #86efac; }
-        .tok-html-comment { color: #6b7280; font-style: italic; }
-        .tok-json-key { color: #fbbf24; }
-        .tok-json-str { color: #86efac; }
-        .tok-json-num { color: #67e8f9; }
-        .tok-json-bool { color: #c084fc; }
-        .tok-json-null { color: #f87171; }
-        .tok-json-punct { color: #94a3b8; }
-
-        .response-actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-left: auto;
-        }
-        .response-actions .btn-secondary {
-            font-size: 11px;
-            padding: 3px 8px;
-        }
+        
     </style>
 </head>
 <body>
@@ -252,7 +30,7 @@
             <div class="row" style="margin-top:1px">
                 <button id="reloadUrl" class="btn-secondary" data-i18n="url.reload" data-i18n-title="url.reload" title=" Load current URL">↻ Aktuelle laden</button>
                 <button id="copyUrl" class="btn-secondary" data-i18n="url.copy" data-i18n-title="url.copy" title="Copy URL">📋 URL kopieren</button>
-                <button id="copyCurl" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">₿ cURL</button>
+                <button id="copyCurl" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">cURL</button>
                 <!--<button id="openUrl" class="btn-secondary" title="In aktuellem Tab öffnen">↗ Open</button> -->
                 
                 <button id="injectPage" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
@@ -395,7 +173,7 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                         <button id="reloadTesterHeaders" class="btn-secondary" data-i18n="req.liveHeader">↻ Live-Header</button>
                         <button id="loadNetHeaders" class="btn-secondary" data-i18n="req.lastNetwork"> ⬇ Letzter Network-Request</button>
                         <button id="clearTesterHeaders" class="btn-secondary" data-i18n="req.clear">Leeren</button>
-                        <button id="copyCurl2" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">₿ cURL</button>
+                        <button id="copyCurl2" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">cURL</button>
                         <button id="injectPage2" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
                     </div>
                     <label style="margin-top:8px;display:block"><span data-i18n="req.body">Body</span> <span class="hint" style="text-transform:none;font-weight:400" data-i18n="req.bodyHint">(POST / PUT / PATCH …)</span></label>
@@ -505,7 +283,7 @@ X-Forwarded-For: 127.0.0.1"></textarea>
             <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
                 <button id="netCopyUrl" class="btn-secondary" data-i18n="net.copyUrl">URL kopieren</button>
                 <button id="netToTester" class="btn-primary" data-i18n="net.toTester" data-i18n-title="net.toTester" title="→ Tester">→ Tester</button>
-                <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="₿ cURL">₿ cURL</button>
+                <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="Create cURL">cURL</button>
                 <button id="netCopyParams" class="btn-secondary" data-i18n="net.copyParams" data-i18n-title="net.copyParams" title="Params kopieren">Params kopieren</button>
                 <button id="netReplay" class="btn-secondary" data-i18n="net.replay" data-i18n-title="net.replay" title="↻ Replay">↻ Replay</button>
             </div>
@@ -543,46 +321,89 @@ X-Forwarded-For: 127.0.0.1"></textarea>
     <div id="tools" class="tab-content">
         <section class="section">
             <label data-i18n="enc.label">Encode / Decode</label>
-            <textarea id="encodeInput" rows="3" data-i18n-placeholder="enc.placeholder" placeholder="Text einfügen…"></textarea>
-            <div class="row" style="margin:8px 0">
-                <select id="encodingType" style="flex:1">
-                    <option value="url">URL Encode</option>
-                    <option value="url2">Double URL Encode</option>
-                    <option value="base64">Base64</option>
-                    <option value="base64url">Base64 URL-Safe</option>
-                    <option value="hex">Hex (spaced)</option>
-                    <option value="hex0x">Hex (0x...)</option>
-                    <option value="hexslash">Hex (\x..)</option>
-                    <option value="ascii">ASCII / Decimal</option>
-                    <option value="sqlchar">SQL CHAR()</option>
-                    <option value="unicode">Unicode \u</option>
-                    <option value="unicodeu">Unicode %u</option>
-                    <option value="html">HTML Entities</option>
-                    <option value="json">JSON</option>
-                    <option value="jwt">JWT Decode</option>
-                    <option value="rot13">ROT13</option>
-                    <option value="binary">Binary</option>
+            <textarea id="encodeInput" rows="3" data-i18n-placeholder="enc.placeholder" placeholder="Insert text…"></textarea>
+            <div class="row" style="margin:8px 0;gap:6px;flex-wrap:wrap;align-items:center">
+                <select id="encodingType" style="flex:1;min-width:160px">
+                    <optgroup label="URL" data-i18n-label="enc.group.url">
+                        <option value="url" data-i18n="enc.type.url">URL Encode</option>
+                        <option value="url2" data-i18n="enc.type.url2">Double URL Encode</option>
+                        <option value="url3" data-i18n="enc.type.url3">Triple URL Encode</option>
+                        <option value="urlsel" data-i18n="enc.type.urlsel">Selective URL (SQLi)</option>
+                    </optgroup>
+                    <optgroup label="Base64" data-i18n-label="enc.group.base64">
+                        <option value="base64" data-i18n="enc.type.base64">Base64</option>
+                        <option value="base64url" data-i18n="enc.type.base64url">Base64 URL-Safe</option>
+                    </optgroup>
+                    <optgroup label="Hex / Binary" data-i18n-label="enc.group.hex">
+                        <option value="hex" data-i18n="enc.type.hex">Hex (spaced)</option>
+                        <option value="hex0x" data-i18n="enc.type.hex0x">Hex (0xAABB…)</option>
+                        <option value="hexslash" data-i18n="enc.type.hexslash">Hex (\x..)</option>
+                        <option value="hexcomma" data-i18n="enc.type.hexcomma">Hex (0xAA,0xBB)</option>
+                        <option value="binary" data-i18n="enc.type.binary">Binary</option>
+                        <option value="ascii" data-i18n="enc.type.ascii">ASCII / Decimal</option>
+                    </optgroup>
+                    <optgroup label="SQL" data-i18n-label="enc.group.sql">
+                        <option value="sqlchar" data-i18n="enc.type.sqlchar">SQL CHAR(65,66)</option>
+                        <option value="sqlcharhex" data-i18n="enc.type.sqlcharhex">SQL CHAR(0x41,…)</option>
+                        <option value="sqlconcat" data-i18n="enc.type.sqlconcat">SQL CONCAT(CHAR…)</option>
+                    </optgroup>
+                    <optgroup label="Unicode / HTML" data-i18n-label="enc.group.unicode">
+                        <option value="unicode" data-i18n="enc.type.unicode">Unicode \u</option>
+                        <option value="unicodeu" data-i18n="enc.type.unicodeu">Unicode %u</option>
+                        <option value="fullwidth" data-i18n="enc.type.fullwidth">Fullwidth Unicode</option>
+                        <option value="html" data-i18n="enc.type.html">HTML Entities</option>
+                    </optgroup>
+                    <optgroup label="Other" data-i18n-label="enc.group.other">
+                        <option value="json" data-i18n="enc.type.json">JSON String</option>
+                        <option value="jwt" data-i18n="enc.type.jwt">JWT Decode</option>
+                        <option value="rot13" data-i18n="enc.type.rot13">ROT13</option>
+                    </optgroup>
                 </select>
                 <button id="encodeBtn" class="btn-primary" data-i18n="enc.encode">Encode</button>
                 <button id="decodeBtn" class="btn-secondary" data-i18n="enc.decode">Decode</button>
+                <button id="swapEncode" class="btn-secondary" data-i18n="enc.swap" data-i18n-title="enc.swapTitle" title="Output ↔ Input">⇅ Swap</button>
             </div>
-            <textarea id="encodeOutput" rows="3" data-i18n-placeholder="enc.result" placeholder="Ergebnis…"></textarea>
-            <button id="copyEncode" class="btn-secondary" style="margin-top:6px" data-i18n="enc.copy">Kopieren</button>
+            <div class="row" style="margin:0 0 8px;gap:6px;flex-wrap:wrap;align-items:center">
+                <label style="margin:0;font-weight:400;text-transform:none;font-size:12px">
+                    <input type="checkbox" id="encLive" checked> <span data-i18n="enc.live">Live</span>
+                </label>
+                <span class="hint" style="font-size:11px" id="encChainHint" data-i18n="enc.chainHint">Chain: optional 2nd stage</span>
+                <select id="encodingType2" style="min-width:140px;font-size:12px">
+                    <option value="" data-i18n="enc.chainNone">– no 2nd stage –</option>
+                    <option value="url" data-i18n="enc.type.url">URL Encode</option>
+                    <option value="url2" data-i18n="enc.type.url2short">Double URL</option>
+                    <option value="base64" data-i18n="enc.type.base64">Base64</option>
+                    <option value="base64url" data-i18n="enc.type.base64url">Base64 URL-Safe</option>
+                    <option value="hex" data-i18n="enc.type.hexShort">Hex</option>
+                    <option value="hex0x" data-i18n="enc.type.hex0xShort">Hex 0x</option>
+                </select>
+            </div>
+            <textarea id="encodeOutput" rows="4" data-i18n-placeholder="enc.result" placeholder="Result…" style="font-family:ui-monospace,monospace"></textarea>
+            <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
+                <button id="copyEncode" class="btn-secondary" data-i18n="enc.copy">Copy</button>
+                <button id="encToPayload" class="btn-secondary" data-i18n="enc.toPayload" data-i18n-title="enc.toPayloadTitle" title="Result → Payload field">→ Payload</button>
+                <button id="encToUrl" class="btn-secondary" data-i18n="enc.toUrl" data-i18n-title="enc.toUrlTitle" title="Insert result at cursor in URL">→ URL</button>
+                <button id="encToBody" class="btn-secondary" data-i18n="enc.toBody" data-i18n-title="enc.toBodyTitle" title="Result → Request Body">→ Body</button>
+                <button id="clearEncode" class="btn-secondary" data-i18n="enc.clear">Clear</button>
+            </div>
+            <div id="encStatus" style="margin-top:6px;font-size:11px;color:#888"></div>
         </section>
     </div>
 
     <!-- ===================== TAB: Options / Theme ===================== -->
     <div id="options" class="tab-content">
         <section class="section">
-            <label data-i18n="opt.language">Sprache</label>
-            <p class="hint" style="margin-bottom:10px" data-i18n="opt.languageHint">Oberflächensprache wählen.</p>
+            <label data-i18n="opt.language">Language</label>
+            <p class="hint" style="margin-bottom:10px" data-i18n="opt.languageHint">Choose interface language.</p>
             <div class="row" style="gap:10px;align-items:center">
                 <select id="langSelect" style="min-width:160px">
-
                     <option value="en" data-i18n="opt.lang.en">English</option>
-                    <option value="es" data-i18n="opt.lang.es">Español</option>
                     <option value="de" data-i18n="opt.lang.de">Deutsch</option>
+                    <option value="es" data-i18n="opt.lang.es">Español</option>
+                    <option value="fr" data-i18n="opt.lang.fr">Français</option>
+                    <option value="pt" data-i18n="opt.lang.pt">Português</option>
                     <option value="ru" data-i18n="opt.lang.ru">Русский</option>
+                    <option value="ja" data-i18n="opt.lang.ja">日本語</option>
                     <option value="zh" data-i18n="opt.lang.zh">中文</option>
                 </select>
             </div>

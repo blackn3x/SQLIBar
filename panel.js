@@ -25,8 +25,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // ======================
     // UPDATE CHECK
     // ======================
-    const ADDON_VERSION = "1.0.1"; // <-- aktuelle Version hier pflegen
-    // JSON z.B. auf GitHub Raw: { "version": "1.3.0", "url": "https://..." }
+    const ADDON_VERSION = "1.0.2"; // <-- aktuelle Version hier pflegen
     const UPDATE_URL = "https://raw.githubusercontent.com/blackn3x/SQLIBar/refs/heads/main/version.json";
 
     function parseVersion(v) {
@@ -1037,31 +1036,158 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("copyCurl2")?.addEventListener("click", copyCurlToClipboard);
 
     // ======================
-    // ENCODE / DECODE
+    // ENCODE / DECODE (improved)
     // ======================
-    document.getElementById("encodeBtn")?.addEventListener("click", () => {
-        const input = document.getElementById("encodeInput").value;
-        const type = document.getElementById("encodingType").value;
-        document.getElementById("encodeOutput").value = encodeData(input, type);
-        log(`Encode: ${type}`);
+    function getEncodeTypes() {
+        const t1 = document.getElementById("encodingType")?.value || "url";
+        const t2 = document.getElementById("encodingType2")?.value || "";
+        return t2 ? [t1, t2] : [t1];
+    }
+
+    function setEncStatus(msg, isErr) {
+        const el = document.getElementById("encStatus");
+        if (!el) return;
+        el.textContent = msg || "";
+        el.style.color = isErr ? "#f87171" : "#888";
+    }
+
+    function runEncode(direction) {
+        const input = document.getElementById("encodeInput")?.value ?? "";
+        const types = getEncodeTypes();
+        const out = document.getElementById("encodeOutput");
+        if (!out) return;
+        try {
+            let result;
+            if (types.length > 1 && typeof transformChain === "function") {
+                result = transformChain(input, types, direction);
+            } else {
+                result = direction === "decode"
+                    ? decodeData(input, types[0])
+                    : encodeData(input, types[0]);
+            }
+            out.value = result;
+            const label = types.filter(Boolean).join(" → ");
+            const prefix = direction === "decode"
+                ? (typeof t === "function" ? t("enc.statusDecoded") : "Decoded:")
+                : (typeof t === "function" ? t("enc.statusEncoded") : "Encoded:");
+            const chars = typeof t === "function" ? t("enc.chars") : "chars";
+            setEncStatus(prefix + " " + label + " · " + (result?.length ?? 0) + " " + chars);
+            log((direction === "decode" ? "Decode: " : "Encode: ") + label);
+        } catch (e) {
+            out.value = "Fehler: " + (e.message || e);
+            setEncStatus((typeof t === "function" ? t("enc.error") : "Error:") + " " + (e.message || e), true);
+            log((direction === "decode" ? "Decode" : "Encode") + " fehlgeschlagen: " + (e.message || e));
+        }
+    }
+
+    function updateEncodeButtons() {
+        const type = document.getElementById("encodingType")?.value || "";
+        const encBtn = document.getElementById("encodeBtn");
+        const decBtn = document.getElementById("decodeBtn");
+        if (typeof isDecodeOnly === "function" && isDecodeOnly(type)) {
+            if (encBtn) encBtn.disabled = true;
+            if (decBtn) decBtn.disabled = false;
+        } else if (typeof isEncodeOnly === "function" && isEncodeOnly(type)) {
+            if (encBtn) encBtn.disabled = false;
+            if (decBtn) decBtn.disabled = true;
+        } else {
+            if (encBtn) encBtn.disabled = false;
+            if (decBtn) decBtn.disabled = false;
+        }
+    }
+
+    let encLiveTimer = null;
+    function scheduleLiveEncode() {
+        if (!document.getElementById("encLive")?.checked) return;
+        clearTimeout(encLiveTimer);
+        encLiveTimer = setTimeout(() => {
+            const type = document.getElementById("encodingType")?.value || "";
+            if (typeof isDecodeOnly === "function" && isDecodeOnly(type)) {
+                runEncode("decode");
+            } else {
+                runEncode("encode");
+            }
+        }, 180);
+    }
+
+    document.getElementById("encodeBtn")?.addEventListener("click", () => runEncode("encode"));
+    document.getElementById("decodeBtn")?.addEventListener("click", () => runEncode("decode"));
+
+    document.getElementById("encodingType")?.addEventListener("change", () => {
+        updateEncodeButtons();
+        scheduleLiveEncode();
+    });
+    document.getElementById("encodingType2")?.addEventListener("change", () => scheduleLiveEncode());
+    document.getElementById("encodeInput")?.addEventListener("input", () => scheduleLiveEncode());
+    document.getElementById("encLive")?.addEventListener("change", () => {
+        if (document.getElementById("encLive")?.checked) scheduleLiveEncode();
     });
 
-    document.getElementById("decodeBtn")?.addEventListener("click", () => {
-        const input = document.getElementById("encodeInput").value;
-        const type = document.getElementById("encodingType").value;
-        try {
-            document.getElementById("encodeOutput").value = decodeData(input, type);
-            log(`Decode: ${type}`);
-        } catch (e) {
-            document.getElementById("encodeOutput").value = "Decode-Fehler: " + e.message;
-            log("Decode fehlgeschlagen");
-        }
+    document.getElementById("swapEncode")?.addEventListener("click", () => {
+        const inp = document.getElementById("encodeInput");
+        const out = document.getElementById("encodeOutput");
+        if (!inp || !out) return;
+        const a = inp.value;
+        inp.value = out.value;
+        out.value = a;
+        setEncStatus(typeof t === "function" ? t("enc.statusSwapped") : "Swapped Input ↔ Output");
+        log("Encode Swap");
+        scheduleLiveEncode();
     });
 
     document.getElementById("copyEncode")?.addEventListener("click", () => {
-        navigator.clipboard.writeText(document.getElementById("encodeOutput").value);
-        log("Encode-Ausgabe kopiert");
+        const v = document.getElementById("encodeOutput")?.value || "";
+        navigator.clipboard.writeText(v).then(() => {
+            setEncStatus((typeof t === "function" ? t("enc.statusCopied") : "Copied") + " (" + v.length + " " + (typeof t === "function" ? t("enc.chars") : "chars") + ")");
+            log("Encode-Ausgabe kopiert");
+        }).catch((e) => setEncStatus((typeof t === "function" ? t("enc.copyFailed") : "Copy failed:") + " " + e.message, true));
     });
+
+    document.getElementById("encToPayload")?.addEventListener("click", () => {
+        const v = document.getElementById("encodeOutput")?.value || "";
+        if (!v) { setEncStatus(typeof t === "function" ? t("enc.emptyResult") : "Empty result", true); return; }
+        const cp = document.getElementById("customPayload");
+        if (cp) cp.value = v;
+        setEncStatus(typeof t === "function" ? t("enc.statusToPayload") : "→ Payload applied");
+        log("Encode → Payload");
+    });
+
+    document.getElementById("encToUrl")?.addEventListener("click", () => {
+        const v = document.getElementById("encodeOutput")?.value || "";
+        if (!v) { setEncStatus(typeof t === "function" ? t("enc.emptyResult") : "Empty result", true); return; }
+        const input = document.getElementById("urlInput");
+        if (!input) return;
+        const url = input.value || "";
+        const start = input.selectionStart ?? url.length;
+        const end = input.selectionEnd ?? url.length;
+        input.value = url.substring(0, start) + v + url.substring(end);
+        const newPos = start + v.length;
+        input.setSelectionRange(newPos, newPos);
+        input.focus();
+        setEncStatus(typeof t === "function" ? t("enc.statusToUrl") : "→ Inserted at URL cursor");
+        log("Encode → URL");
+    });
+
+    document.getElementById("encToBody")?.addEventListener("click", () => {
+        const v = document.getElementById("encodeOutput")?.value || "";
+        if (!v) { setEncStatus(typeof t === "function" ? t("enc.emptyResult") : "Empty result", true); return; }
+        const ta = document.getElementById("testerBody");
+        if (!ta) return;
+        ta.value = (ta.value && !ta.value.endsWith("\n") ? ta.value + "\n" : ta.value) + v;
+        setEncStatus(typeof t === "function" ? t("enc.statusToBody") : "→ Appended to Body");
+        log("Encode → Body");
+    });
+
+    document.getElementById("clearEncode")?.addEventListener("click", () => {
+        const inp = document.getElementById("encodeInput");
+        const out = document.getElementById("encodeOutput");
+        if (inp) inp.value = "";
+        if (out) out.value = "";
+        setEncStatus("");
+        log("Encode-Felder geleert");
+    });
+
+    updateEncodeButtons();
 
 
     
