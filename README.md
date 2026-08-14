@@ -87,20 +87,21 @@ Built for security researchers, penetration testers, and developers who analyze 
 
 ## Installation
 
+### Firefox Add-ons (recommended)
+Install from [addons.mozilla.org](https://addons.mozilla.org/de/firefox/addon/sqlibar/) (link once published).
+
 ### Temporary load (development)
 1. Open `about:debugging#/runtime/this-firefox`
-2. **Load Temporary Add-on…**
+2. Click **Load Temporary Add-on…**
 3. Select the extension’s `manifest.json`
 
 ### From GitHub Releases
 1. Download the latest `.xpi` from [Releases](../../releases)
-2. `about:addons` → gear → **Install Add-on From File…**
+2. Open `about:addons` → gear icon → **Install Add-on From File…**
 3. Select the `.xpi`
 
-### Firefox Add-ons (when published)
-Install from [addons.mozilla.org](https://addons.mozilla.org) (link once available).
-
 ---
+
 
 ## Permissions
 
