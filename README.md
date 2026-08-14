@@ -88,7 +88,7 @@ Built for security researchers, penetration testers, and developers who analyze 
 ## Installation
 
 ### Firefox Add-ons (recommended)
-Install from [addons.mozilla.org](https://addons.mozilla.org/de/firefox/addon/sqlibar/) (link once published).
+Install from [addons.mozilla.org](https://addons.mozilla.org/de/firefox/addon/sqlibar/) .
 
 ### Temporary load (development)
 1. Open `about:debugging#/runtime/this-firefox`
