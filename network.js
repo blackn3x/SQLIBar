@@ -122,7 +122,7 @@ function renderNetworkList() {
         const isActive = i === selectedNetIndex;
         const chevron = isActive ? "▼" : "▶";
         const pBadge = pCount > 0
-            ? `<span class="param-badge query" style="margin-left:4px;flex-shrink:0" title="${pCount} Parameter">${chevron} ${pCount} param found</span>`
+            ? `<span class="param-badge query" style="background-color:transparent;color:var(--primary); margin-left:4px;flex-shrink:0" title="${pCount} Parameter">${chevron} ${pCount} param found</span>`
             : `<span style="margin-left:4px;flex-shrink:0;color:#555;font-size:10px">${chevron}</span>`;
         const shortUrl = e.url.length > 90 ? e.url.substring(0, 87) + "…" : e.url;
         let html = `
