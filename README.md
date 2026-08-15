@@ -31,6 +31,7 @@ Built for security researchers, penetration testers, and developers who analyze 
 - **Current payload** or built-in detection set (error-based + time-based)
 - Progress, abort, results with status / timing / badges (`clean` · `HIGH` · `TIME` · `error`)
 - Load any result back into the tester
+<img width="1115" height="366" alt="Screenshot 2026-08-15 141256" src="https://github.com/user-attachments/assets/25191dd1-c9e6-4fe5-a29b-9056d91ac747" />
 
 ### JSON Key SQLi Mass-Test
 
@@ -40,6 +41,7 @@ Built for security researchers, penetration testers, and developers who analyze 
 - Options: current payload or detection set; optional **leaves only**
 - Progress, abort, results panel (path, original value, payload, status, timing)
 - **→ Body** loads the injected JSON for that single test
+<img width="1124" height="730" alt="Screenshot 2026-08-15 141235" src="https://github.com/user-attachments/assets/2ecc59b2-b1cd-44d3-bcea-fa206f2d076a" />
 
 ### Live Network Monitor
 
