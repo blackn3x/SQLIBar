@@ -19,7 +19,7 @@
 function fillTesterHeaders(text, source) {
     const th = document.getElementById("testerHeaders");
     if (th) th.value = text;
-    log("Headers geladen: " + source);
+    log((typeof t === "function" ? t("log.headersLoaded") : "Headers loaded:") + " " + source);
 }
 
 document.getElementById("reloadTesterHeaders")?.addEventListener("click", () => {
@@ -36,26 +36,26 @@ document.getElementById("reloadTesterHeaders")?.addEventListener("click", () => 
                 "User-Agent: " + data.ua,
                 "Referer: " + (data.ref || ""),
                 "Cookie: " + (data.cookie || "")
-            ].join("\n"), "Live von Seite");
-        } catch (e) { log("Live-Headers fehlgeschlagen"); }
+            ].join("\n"), typeof t === "function" ? t("log.liveFromPage") : "Live from page");
+        } catch (e) { log(typeof t === "function" ? t("log.liveHeadersFailed") : "Live headers failed"); }
     });
 });
 
 document.getElementById("loadNetHeaders")?.addEventListener("click", () => {
     if (typeof networkEntries === "undefined" || !networkEntries.length) {
-        log("Kein Network-Eintrag");
+        log(typeof t === "function" ? t("log.noNetworkEntry") : "No network entry");
         return;
     }
     const e = networkEntries[0];
     const text = e.reqHeaders || "";
-    if (!text || text === "(none)") { log("Keine Request-Header"); return; }
+    if (!text || text === "(none)") { log(typeof t === "function" ? t("log.noReqHeaders") : "No request headers"); return; }
     fillTesterHeaders(text, "Network: " + e.method + " " + (e.url || "").substring(0, 50));
 });
 
 document.getElementById("clearTesterHeaders")?.addEventListener("click", () => {
     const th = document.getElementById("testerHeaders");
     if (th) th.value = "";
-    log("Tester-Headers geleert");
+    log(typeof t === "function" ? t("log.headersCleared") : "Tester headers cleared");
 });
 
 function parseCookieHeaderLines(headerText) {
@@ -83,7 +83,7 @@ function setCookiesViaBackground(url, cookieList) {
             { action: "setCookies", url, cookies: cookieList },
             (resp) => {
                 if (browser.runtime.lastError) {
-                    log("Background-Fehler: " + browser.runtime.lastError.message);
+                    log((typeof t === "function" ? t("log.backgroundError") : "Background error:") + " " + browser.runtime.lastError.message);
                     resolve({ ok: false, error: browser.runtime.lastError.message });
                     return;
                 }
@@ -181,7 +181,7 @@ unionColumns?.addEventListener("change", () => {
     if (categorySelect?.value === "Union-based") {
         loadSelectedPreset(false);
     }
-    log(`Union-Spalten: ${unionColumns.value}`);
+    log((typeof t === "function" ? t("log.unionColumns") : "Union columns:") + " " + unionColumns.value);
 });
 
 // Initial
@@ -189,46 +189,117 @@ if (categorySelect) {
     fillPresetSelect(categorySelect.value);
 }
 
+/**
+ * If testerBody contains JSON, inject payload into EVERY string leaf value
+ * (in-place in the body textarea). Returns true if handled.
+ * Example:
+ *   {"search":{"term":"Laptop","scope":"name"}} + "'"
+ *   → {"search":{"term":"Laptop'","scope":"name'"}}
+ */
+function applyPayloadToJsonBody(payload, name) {
+    const ta = document.getElementById("testerBody");
+    if (!ta) return false;
+    const raw = (ta.value || "").trim();
+    if (!raw || !(raw.startsWith("{") || raw.startsWith("["))) return false;
+
+    let root;
+    try {
+        root = JSON.parse(raw);
+    } catch (e) {
+        return false;
+    }
+
+    // Prefer shared smart injector from params.js (handles Base64-JSON)
+    if (typeof injectAllLeaves === "function") {
+        const clone = JSON.parse(JSON.stringify(root));
+        injectAllLeaves(clone, payload);
+        ta.value = JSON.stringify(clone, null, 2);
+        const oj = document.getElementById("optBodyJson");
+        if (oj) oj.checked = true;
+        log((typeof t === "function" ? t("log.appliedJsonBody", { name }) : `Applied "${name}" → JSON body values (incl. Base64-JSON inner values):`) + " " +
+            payload.substring(0, 40) + (payload.length > 40 ? "…" : ""));
+        return true;
+    }
+
+    // Fallback: Walk all leaves and append payload to each string/number value
+    function injectAll(obj) {
+        if (obj === null || obj === undefined) return obj;
+        if (typeof obj !== "object") return obj;
+        if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; i++) {
+                if (obj[i] !== null && typeof obj[i] === "object") injectAll(obj[i]);
+                else if (typeof obj[i] === "string" || typeof obj[i] === "number") {
+                    obj[i] = String(obj[i]) + String(payload);
+                }
+            }
+            return obj;
+        }
+        Object.keys(obj).forEach((k) => {
+            const v = obj[k];
+            if (v !== null && typeof v === "object") injectAll(v);
+            else if (typeof v === "string" || typeof v === "number") {
+                obj[k] = String(v) + String(payload);
+            }
+        });
+        return obj;
+    }
+
+    const clone = JSON.parse(JSON.stringify(root));
+    injectAll(clone);
+    ta.value = JSON.stringify(clone, null, 2);
+    const oj = document.getElementById("optBodyJson");
+    if (oj) oj.checked = true;
+    log((typeof t === "function" ? t("log.appliedJsonBodySimple", { name }) : `Applied "${name}" → JSON body values (not keys):`) + " " +
+        payload.substring(0, 40) + (payload.length > 40 ? "…" : ""));
+    return true;
+}
+
 function applyPayload(payload, name = "Custom") {
+    lastPayload = payload;
+    if (customPayload) customPayload.value = payload;
+
+    // 1) Prefer smart JSON-Body injection when body holds JSON
+    //    (avoids the classic mistake: whole JSON + payload at the end)
+    const bodyEl = document.getElementById("testerBody");
+    const bodyRaw = (bodyEl?.value || "").trim();
+    const bodyIsJson = bodyRaw.startsWith("{") || bodyRaw.startsWith("[");
+    if (bodyIsJson && applyPayloadToJsonBody(payload, name)) {
+        return;
+    }
+
+    // 2) Classic: insert at cursor in URL field
     const input = urlInput;
     if (!input) {
-        log("Kein URL-Feld gefunden");
+        log(typeof t === "function" ? t("log.noUrlField") : "No URL field found");
         return;
     }
 
     const url = input.value;
     if (!url.trim()) {
-        log("Keine URL vorhanden");
+        log(typeof t === "function" ? t("log.noUrlNoJsonBody") : "No URL present (and no JSON in body)");
         return;
     }
 
-    lastPayload = payload;
-    if (customPayload) customPayload.value = payload;
-
-    // Cursor- / Auswahlposition
     const start = input.selectionStart ?? url.length;
     const end = input.selectionEnd ?? url.length;
-
-    // Payload an der Cursorposition einfügen (markierten Text ersetzen)
     const newUrl = url.substring(0, start) + payload + url.substring(end);
 
     input.value = newUrl;
-
-    // Cursor hinter den eingefügten Payload setzen + Fokus behalten
     const newPos = start + payload.length;
     input.setSelectionRange(newPos, newPos);
     input.focus();
-
-    // Request-Builder mitsynchronisieren
     if (requestUrl) requestUrl.value = newUrl;
 
-    log(`Angewendet „${name}“ an Position ${start} → ${payload.substring(0, 50)}${payload.length > 50 ? "…" : ""}`);
+    log((typeof t === "function" ? t("log.applied") : "Applied") + ` „${name}“`, "success", {
+        detail: "URL-Position " + start + " · " + payload.length + " " + (typeof t === "function" ? t("enc.chars") : "chars"),
+        preview: payload
+    });
 }
 
 document.getElementById("applyCustom")?.addEventListener("click", () => {
     const payload = customPayload.value.trim();
     if (!payload) {
-        log("Leerer Payload");
+        log(typeof t === "function" ? t("log.emptyPayload") : "Empty payload");
         return;
     }
     applyPayload(payload, "Custom");
@@ -242,32 +313,37 @@ document.getElementById("applyCustom")?.addEventListener("click", () => {
 document.getElementById("reloadUrl")?.addEventListener("click", () => {
     browser.devtools.inspectedWindow.eval("window.location.href", (result) => {
         if (!result) {
-            log("Could not read current URL");
+            log(typeof t === "function" ? t("log.couldNotReadUrl") : "Could not read current URL");
             return;
         }
         if (urlInput) urlInput.value = result;
         if (requestUrl) requestUrl.value = result;
-        log("Current URL loaded");
+        log(typeof t === "function" ? t("log.currentUrlLoaded") : "Current URL loaded", "success", { preview: result });
     });
 });
 
 document.getElementById("copyUrl")?.addEventListener("click", () => {
-    navigator.clipboard.writeText(urlInput.value);
-    log("URL kopiert");
+    const v = urlInput?.value || "";
+    if (typeof copyWithToast === "function") {
+        copyWithToast(v, typeof t === "function" ? t("log.urlCopied") : "URL copied");
+    } else {
+        navigator.clipboard.writeText(v);
+        log(typeof t === "function" ? t("log.urlCopied") : "URL copied", "success", { detail: v.length + " " + (typeof t === "function" ? t("enc.chars") : "chars"), preview: v });
+    }
 });
 
 document.getElementById("openUrl")?.addEventListener("click", () => {
     browser.devtools.inspectedWindow.eval(
         `location.href = ${JSON.stringify(urlInput.value)}`
     );
-    log("URL geöffnet");
+    log(typeof t === "function" ? t("log.urlOpened") : "URL opened");
 });
 
 document.getElementById("useAsRequestUrl")?.addEventListener("click", () => {
     if (urlInput?.value) {
         requestUrl.value = urlInput.value;
         document.querySelector('[data-tab="request"]').click();
-        log("URL in Request Builder übernommen");
+        log(typeof t === "function" ? t("log.urlToRequestBuilder") : "URL taken into Request Builder");
     }
 });
 
@@ -305,9 +381,8 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
     const currentUrl = urlInput?.value?.trim();
 
     if (!currentUrl) {
-        if (!payload) { log("Kein Payload / keine URL"); return; }
+        if (!payload) { log(typeof t === "function" ? t("log.noPayloadNoUrl") : "No payload / no URL"); return; }
         browser.runtime.sendMessage({ action: "inject", payload });
-        log(`Payload injiziert: ${payload.substring(0, 50)}…`);
         return;
     }
 
@@ -324,16 +399,16 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
     if (setCookies) {
         const cookieList = parseCookieHeaderLines(headerText);
         if (cookieList.length) {
-            log("Setze " + cookieList.length + " Cookie(s)…");
+            log((typeof t === "function" ? t("log.cookieSet") : "Setting") + " " + cookieList.length + " Cookie(s)…");
             const resp = await setCookiesViaBackground(currentUrl, cookieList);
             if (resp && resp.ok) {
                 (resp.results || []).forEach(r => {
-                    if (r.ok) log("Cookie OK: " + r.name + "=" + String(r.value || "").substring(0, 40));
-                    else log("Cookie FAIL: " + r.name + " → " + r.error);
+                    if (r.ok) log((typeof t === "function" ? t("log.cookieOk") : "Cookie OK:") + " " + r.name + "=" + String(r.value || "").substring(0, 40));
+                    else log((typeof t === "function" ? t("log.cookieFail") : "Cookie FAIL:") + " " + r.name + " → " + r.error);
                 });
-                if (resp.store) log("Store: " + resp.store.join("; "));
+                if (resp.store) log((typeof t === "function" ? t("log.cookieStore") : "Store:") + " " + resp.store.join("; "));
             } else {
-                log("Cookie-Set fehlgeschlagen: " + (resp && resp.error || "?"), "error");
+                log((typeof t === "function" ? t("log.cookieSetFailed") : "Cookie set failed:") + " " + (resp && resp.error || "?"), "error");
             }
         }
     }
@@ -364,9 +439,9 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
     }
 
     const tr = document.getElementById("testerResponse");
-    if (tr) tr.innerHTML = `<span class="tok-dim">Lade Response…</span> <span class="tok-key">${escapeHtml(method)}</span>\n<span class="tok-url">${escapeHtml(currentUrl)}</span>`;
+    if (tr) tr.innerHTML = `<span class="tok-dim">${typeof t === "function" ? t("resp.loading") : "Loading Response…"}</span> <span class="tok-key">${escapeHtml(method)}</span>\n<span class="tok-url">${escapeHtml(currentUrl)}</span>`;
     const sum = document.querySelector("#testerResponseDetails summary");
-    if (sum) sum.textContent = `Page Response – ${method} lade…`;
+    if (sum) sum.textContent = `${typeof t === "function" ? t("resp.summary") : "Page Response"} – ${method} …`;
 
     try {
         // Fetch via background script → no panel CORS
@@ -407,11 +482,19 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
             analyzeSqliResponse(text, resp.status, text.length, ms);
         }
 
-        if (sum) sum.textContent = `Page Response (${method} ${resp.status}) – ${text.length} Bytes · ${ms} ms`;
-        log(`Open → ${method} ${resp.status} (${text.length} B, ${ms} ms)`);
+        if (sum) sum.textContent = `${typeof t === "function" ? t("resp.summary") : "Page Response"} (${method} ${resp.status}) – ${text.length} Bytes · ${ms} ms`;
+        if (typeof toastRequest === "function") {
+            toastRequest(method, resp.status, text.length, ms, currentUrl);
+        } else {
+            log((typeof t === "function" ? t("log.openResult") : "Open →") + ` ${method} ${resp.status}`, "success", {
+                detail: text.length + " B · " + ms + " ms",
+                preview: currentUrl
+            });
+        }
+        log((typeof t === "function" ? t("log.openResult") : "Open →") + ` ${method} ${resp.status} (${text.length} B, ${ms} ms)`);
     } catch (err) {
-        if (tr) tr.innerHTML = `<span class="tok-err">Error: ${escapeHtml(String(err.message || err))}</span>`;
-        if (sum) sum.textContent = "Page Response – Fehler";
+        if (tr) tr.innerHTML = `<span class="tok-err">${typeof t === "function" ? t("resp.error") : "Error"}: ${escapeHtml(String(err.message || err))}</span>`;
+        if (sum) sum.textContent = (typeof t === "function" ? t("resp.summary") : "Page Response") + " – " + (typeof t === "function" ? t("resp.error") : "Error");
         logError(err, "Open / Fetch");
     }
 
@@ -422,7 +505,7 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
                 browser.devtools.inspectedWindow.eval(`location.href = ${JSON.stringify(currentUrl)}`);
             }, 150);
         } else {
-            log("Navigation übersprungen (nur bei GET sinnvoll, aktuelle Methode: " + method + ")");
+            log((typeof t === "function" ? t("log.navSkipped") : "Navigation skipped (only useful for GET, current method:") + " " + method + ")");
         }
     }
 });
@@ -470,10 +553,17 @@ function buildCurlCommand() {
 
 function copyCurlToClipboard() {
     const cmd = buildCurlCommand();
-    if (!cmd) { log("cURL: keine URL"); return; }
-    navigator.clipboard.writeText(cmd).then(() => {
-        log("cURL kopiert (" + cmd.length + " Zeichen)");
-    }).catch(err => logError(err, "cURL Copy"));
+    if (!cmd) {
+        log(typeof t === "function" ? t("log.curlNoUrl") : "cURL: no URL", "warn");
+        return;
+    }
+    if (typeof copyWithToast === "function") {
+        copyWithToast(cmd, typeof t === "function" ? t("log.curlCopied") : "cURL copied");
+    } else {
+        navigator.clipboard.writeText(cmd).then(() => {
+            log(typeof t === "function" ? t("log.curlCopied") : "cURL copied", "success", { detail: cmd.length + " " + (typeof t === "function" ? t("enc.chars") : "chars"), preview: cmd });
+        }).catch(err => logError(err, "cURL Copy"));
+    }
 }
 
 document.getElementById("copyCurl")?.addEventListener("click", copyCurlToClipboard);
@@ -517,11 +607,13 @@ function runEncode(direction) {
             : (typeof t === "function" ? t("enc.statusEncoded") : "Encoded:");
         const chars = typeof t === "function" ? t("enc.chars") : "chars";
         setEncStatus(prefix + " " + label + " · " + (result?.length ?? 0) + " " + chars);
-        log((direction === "decode" ? "Decode: " : "Encode: ") + label);
+        log((direction === "decode"
+            ? (typeof t === "function" ? t("log.decode") : "Decode:")
+            : (typeof t === "function" ? t("log.encode") : "Encode:")) + " " + label);
     } catch (e) {
-        out.value = "Fehler: " + (e.message || e);
+        out.value = (typeof t === "function" ? t("enc.error") : "Error:") + " " + (e.message || e);
         setEncStatus((typeof t === "function" ? t("enc.error") : "Error:") + " " + (e.message || e), true);
-        log((direction === "decode" ? "Decode" : "Encode") + " fehlgeschlagen: " + (e.message || e));
+        log((typeof t === "function" ? t("log.decodeFailed") : "Decode/Encode failed") + ": " + (e.message || e));
     }
 }
 
@@ -576,16 +668,24 @@ document.getElementById("swapEncode")?.addEventListener("click", () => {
     inp.value = out.value;
     out.value = a;
     setEncStatus(typeof t === "function" ? t("enc.statusSwapped") : "Swapped Input ↔ Output");
-    log("Encode Swap");
+    log(typeof t === "function" ? t("log.encodeSwap") : "Encode swap");
     scheduleLiveEncode();
 });
 
 document.getElementById("copyEncode")?.addEventListener("click", () => {
     const v = document.getElementById("encodeOutput")?.value || "";
-    navigator.clipboard.writeText(v).then(() => {
-        setEncStatus((typeof t === "function" ? t("enc.statusCopied") : "Copied") + " (" + v.length + " " + (typeof t === "function" ? t("enc.chars") : "chars") + ")");
-        log("Encode-Ausgabe kopiert");
-    }).catch((e) => setEncStatus((typeof t === "function" ? t("enc.copyFailed") : "Copy failed:") + " " + e.message, true));
+    const label = typeof t === "function" ? t("enc.statusCopied") : "Encode kopiert";
+    const chars = typeof t === "function" ? t("enc.chars") : "Zeichen";
+    if (typeof copyWithToast === "function") {
+        copyWithToast(v, label).then(() => {
+            setEncStatus(label + " (" + v.length + " " + chars + ")");
+        }).catch((e) => setEncStatus((typeof t === "function" ? t("enc.copyFailed") : "Copy failed:") + " " + e.message, true));
+    } else {
+        navigator.clipboard.writeText(v).then(() => {
+            setEncStatus(label + " (" + v.length + " " + chars + ")");
+            log(label, "success", { detail: v.length + " " + chars, preview: v });
+        }).catch((e) => setEncStatus((typeof t === "function" ? t("enc.copyFailed") : "Copy failed:") + " " + e.message, true));
+    }
 });
 
 document.getElementById("encToPayload")?.addEventListener("click", () => {
@@ -594,7 +694,7 @@ document.getElementById("encToPayload")?.addEventListener("click", () => {
     const cp = document.getElementById("customPayload");
     if (cp) cp.value = v;
     setEncStatus(typeof t === "function" ? t("enc.statusToPayload") : "→ Payload applied");
-    log("Encode → Payload");
+    log(typeof t === "function" ? t("log.encodeToPayload") : "Encode → Payload");
 });
 
 document.getElementById("encToUrl")?.addEventListener("click", () => {
@@ -610,7 +710,7 @@ document.getElementById("encToUrl")?.addEventListener("click", () => {
     input.setSelectionRange(newPos, newPos);
     input.focus();
     setEncStatus(typeof t === "function" ? t("enc.statusToUrl") : "→ Inserted at URL cursor");
-    log("Encode → URL");
+    log(typeof t === "function" ? t("log.encodeToUrl") : "Encode → URL");
 });
 
 document.getElementById("encToBody")?.addEventListener("click", () => {
@@ -620,7 +720,7 @@ document.getElementById("encToBody")?.addEventListener("click", () => {
     if (!ta) return;
     ta.value = (ta.value && !ta.value.endsWith("\n") ? ta.value + "\n" : ta.value) + v;
     setEncStatus(typeof t === "function" ? t("enc.statusToBody") : "→ Appended to Body");
-    log("Encode → Body");
+    log(typeof t === "function" ? t("log.encodeToBody") : "Encode → Body");
 });
 
 document.getElementById("clearEncode")?.addEventListener("click", () => {
@@ -629,7 +729,7 @@ document.getElementById("clearEncode")?.addEventListener("click", () => {
     if (inp) inp.value = "";
     if (out) out.value = "";
     setEncStatus("");
-    log("Encode-Felder geleert");
+    log(typeof t === "function" ? t("log.encodeCleared") : "Encode fields cleared");
 });
 
 updateEncodeButtons();
@@ -1004,7 +1104,7 @@ updateEncodeButtons();
                 if (result) {
                     if (urlInput) urlInput.value = result;
                     if (requestUrl) requestUrl.value = result;
-                    log("URL geladen");
+                    log(typeof t === "function" ? t("log.urlLoaded") : "URL loaded");
                 }
             });
         } catch (err) {

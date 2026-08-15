@@ -30,9 +30,9 @@ function renderPageParamList() {
             '<span class="param-name">' + escapeHtml(p.name) + '</span>' +
             '<span class="param-val" title="' + escapeHtml(String(p.value || "")) + '">' + val + '</span>' +
             '<span class="param-src">' + escapeHtml(p.source || "") + '</span>' +
-            '<button class="btn-secondary param-to-url" data-idx="' + i + '" title="An URL anhängen">URL</button>' +
-            '<button class="btn-secondary param-to-body" data-idx="' + i + '" title="In Body">Body</button>' +
-            '<button class="btn-secondary param-to-payload" data-idx="' + i + '" title="Als Payload">PL</button>' +
+            '<button class="btn-secondary param-to-url" data-idx="' + i + '" title="' + (typeof t === "function" ? t("log.paramToUrl") : "Param → URL") + '">URL</button>' +
+            '<button class="btn-secondary param-to-body" data-idx="' + i + '" title="' + (typeof t === "function" ? t("log.paramToBody") : "Param → Body") + '">Body</button>' +
+            '<button class="btn-secondary param-to-payload" data-idx="' + i + '" title="' + (typeof t === "function" ? t("log.paramToPayload") : "Param → Payload") + '">PL</button>' +
         '</div>';
     }).join("");
 
@@ -42,7 +42,7 @@ function renderPageParamList() {
             const p = pageParams[parseInt(btn.dataset.idx, 10)];
             if (!p) return;
             appendParamToUrl(p.name, p.value || "1");
-            log("Param → URL: " + p.name);
+            log((typeof t === "function" ? t("log.paramToUrl") : "Param → URL:") + " " + p.name);
         });
     });
     box.querySelectorAll(".param-to-body").forEach(btn => {
@@ -51,7 +51,7 @@ function renderPageParamList() {
             const p = pageParams[parseInt(btn.dataset.idx, 10)];
             if (!p) return;
             appendParamToBody(p.name, p.value || "1");
-            log("Param → Body: " + p.name);
+            log((typeof t === "function" ? t("log.paramToBody") : "Param → Body:") + " " + p.name);
         });
     });
     box.querySelectorAll(".param-to-payload").forEach(btn => {
@@ -60,7 +60,7 @@ function renderPageParamList() {
             const p = pageParams[parseInt(btn.dataset.idx, 10)];
             if (!p) return;
             if (customPayload) customPayload.value = p.name + "=" + (p.value || "");
-            log("Param → Payload: " + p.name);
+            log((typeof t === "function" ? t("log.paramToPayload") : "Param → Payload:") + " " + p.name);
         });
     });
 }
@@ -187,7 +187,7 @@ return JSON.stringify(params);
 
     browser.devtools.inspectedWindow.eval(code, (result, isException) => {
         if (isException || result == null) {
-            log("Page-Scan fehlgeschlagen: " + (isException && isException.value ? isException.value : "unbekannt"));
+            log((typeof t === "function" ? t("log.pageScanFailed") : "Page-Scan fehlgeschlagen:") + " " + (isException && isException.value ? isException.value : "unbekannt"));
             return;
         }
         try {
@@ -195,9 +195,12 @@ return JSON.stringify(params);
             const order = { hidden: 0, form: 1, query: 2, link: 3, cookie: 4 };
             pageParams.sort((a, b) => (order[a.type] ?? 9) - (order[b.type] ?? 9) || a.name.localeCompare(b.name));
             renderPageParamList();
-            log("Page-Scan: " + pageParams.length + " Parameter gefunden");
+            log(typeof t === "function" ? t("log.pageScanDone") : "Page-Scan fertig", "success", {
+                detail: pageParams.length + " " + (typeof t === "function" ? t("log.paramsFound") : "Parameter gefunden"),
+                preview: pageParams.slice(0, 8).map(p => p.name).join(", ") + (pageParams.length > 8 ? "…" : "")
+            });
         } catch (e) {
-            log("Page-Scan Parse-Fehler: " + e.message);
+            log((typeof t === "function" ? t("log.pageScanParseError") : "Page-Scan Parse-Fehler:") + " " + e.message);
         }
     });
 });
@@ -205,7 +208,7 @@ return JSON.stringify(params);
 document.getElementById("clearPageParams")?.addEventListener("click", () => {
     pageParams = [];
     renderPageParamList();
-    log("Page-Parameter geleert");
+    log(typeof t === "function" ? t("log.pageParamsCleared") : "Page-Parameter geleert");
 });
 
 
@@ -413,21 +416,21 @@ function renderNetParamList() {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             appendParamToUrl(btn.dataset.name, btn.dataset.val || "1");
-            log("Net-Param → URL: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToUrl") : "Net-Param → URL:") + " " + btn.dataset.name);
         });
     });
     box.querySelectorAll(".netp-body").forEach(btn => {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             appendParamToBody(btn.dataset.name, btn.dataset.val || "1");
-            log("Net-Param → Body: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToBody") : "Net-Param → Body:") + " " + btn.dataset.name);
         });
     });
     box.querySelectorAll(".netp-pl").forEach(btn => {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             if (customPayload) customPayload.value = btn.dataset.name + "=" + (btn.dataset.val || "");
-            log("Net-Param → Payload: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToPayload") : "Net-Param → Payload:") + " " + btn.dataset.name);
         });
     });
     // Klick auf Source → zum Request springen
@@ -437,7 +440,10 @@ function renderNetParamList() {
             const rid = parseInt(el.dataset.rid, 10);
             if (!rid) return;
             const idx = networkEntries.findIndex(e => e._id === rid);
-            if (idx < 0) { log("Request nicht mehr in Liste"); return; }
+            if (idx < 0) {
+                log(typeof t === "function" ? t("log.requestNotInList") : "Request nicht mehr in Liste");
+                return;
+            }
             selectedNetIndex = idx;
             showNetworkDetails(idx);
             renderNetworkList();
@@ -455,7 +461,7 @@ document.getElementById("clearNetParams")?.addEventListener("click", () => {
     renderNetParamList();
     renderSelectedRequestParams();
     renderNetworkList();
-    log("Network-Parameter geleert");
+    log(typeof t === "function" ? t("log.netParamsCleared") : "Network-Parameter geleert");
 });
 
 document.getElementById("netParamSearch")?.addEventListener("input", () => renderNetParamList());
@@ -476,7 +482,17 @@ function buildJsonTreeHtml(obj, prefix, depth) {
     if (obj === null) return '<span class="jv">null</span>';
     if (typeof obj !== "object") {
         const s = typeof obj === "string" ? JSON.stringify(obj) : String(obj);
-        return '<span class="jv">' + escapeHtml(s.substring(0, 80)) + '</span>';
+        // Badge only after looksLikeBase64 is defined (hoisted function decl)
+        let badge = "";
+        try {
+            if (typeof obj === "string" && typeof looksLikeBase64 === "function" && looksLikeBase64(obj)) {
+                const isJson = typeof tryParseBase64Json === "function" && tryParseBase64Json(obj);
+                badge = isJson
+                    ? ' <span style="color:#a78bfa;font-size:10px" title="Base64-JSON erkannt → innere Values werden einzeln getestet">[b64-json]</span>'
+                    : ' <span style="color:#38bdf8;font-size:10px" title="Base64 erkannt → decode/append/encode beim Test">[b64]</span>';
+            }
+        } catch (_) {}
+        return '<span class="jv">' + escapeHtml(s.substring(0, 80)) + '</span>' + badge;
     }
     if (Array.isArray(obj)) {
         if (!obj.length) return '<span class="jv">[]</span>';
@@ -536,9 +552,9 @@ function showJsonExplorer(text) {
                 el.style.background = "#3b3b1a";
             });
         });
-        log("JSON Explorer: keys parsed");
+        log(typeof t === "function" ? t("log.jsonExplorer") : "JSON Explorer: keys parsed");
     } catch (e) {
-        tree.innerHTML = '<span style="color:#f87171">Kein gültiges JSON: ' + escapeHtml(e.message) + '</span>';
+        tree.innerHTML = '<span style="color:#f87171">' + (typeof t === "function" ? t("jsontest.noJson") : "Kein gültiges JSON") + ": " + escapeHtml(e.message) + '</span>';
         box.style.display = "block";
     }
 }
@@ -555,33 +571,37 @@ document.getElementById("jsonExplorerClose")?.addEventListener("click", () => {
 
 document.getElementById("jsonToPayload")?.addEventListener("click", () => {
     if (!selectedJsonPath) {
-        log("Kein JSON-Key ausgewählt");
+        log(typeof t === "function" ? t("log.noJsonKey") : "Kein JSON-Key ausgewählt");
         return;
     }
     const leaf = selectedJsonPath.replace(/\[(\d+)\]/g, "").split(".").filter(Boolean).pop() || selectedJsonPath;
     if (customPayload) {
         customPayload.value = leaf + "=" + (selectedJsonValue || "1");
     }
-    log("JSON → Payload: " + leaf);
+    log((typeof t === "function" ? t("log.jsonToPayload") : "JSON → Payload:") + " " + leaf);
 });
 
 document.getElementById("jsonToUrl")?.addEventListener("click", () => {
     if (!selectedJsonPath) {
-        log("Kein JSON-Key ausgewählt");
+        log(typeof t === "function" ? t("log.noJsonKey") : "Kein JSON-Key ausgewählt");
         return;
     }
     const leaf = selectedJsonPath.replace(/\[(\d+)\]/g, "").split(".").filter(Boolean).pop() || selectedJsonPath;
     appendParamToUrl(leaf, selectedJsonValue || "1");
-    log("JSON → URL: " + leaf);
+    log((typeof t === "function" ? t("log.jsonToUrl") : "JSON → URL:") + " " + leaf);
 });
 
 document.getElementById("jsonCopyPath")?.addEventListener("click", () => {
     if (!selectedJsonPath) {
-        log("Kein JSON-Key ausgewählt");
+        log(typeof t === "function" ? t("log.noJsonKey") : "Kein JSON-Key ausgewählt", "warn");
         return;
     }
-    navigator.clipboard.writeText(selectedJsonPath);
-    log("JSON-Path kopiert: " + selectedJsonPath);
+    if (typeof copyWithToast === "function") {
+        copyWithToast(selectedJsonPath, typeof t === "function" ? t("log.jsonPathCopied") : "JSON-Path kopiert");
+    } else {
+        navigator.clipboard.writeText(selectedJsonPath);
+        log(typeof t === "function" ? t("log.jsonPathCopied") : "JSON-Path kopiert", "success", { preview: selectedJsonPath });
+    }
 });
 
 document.getElementById("testerBody")?.addEventListener("blur", () => {
@@ -596,24 +616,70 @@ document.getElementById("testerBody")?.addEventListener("blur", () => {
 // =====================================================================
 const JSON_DETECTION_PAYLOADS = [
     { name: "Single Quote", payload: "'" },
-    { name: "OR 1=1", payload: "' OR 1=1--" },
-    { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)--" },
-    { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))--" },
-    { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)--" },
-    { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)--" },
+    { name: "OR 1=1", payload: "' OR 1=1-- -" },
+    { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)-- -" },
+    { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))-- -" },
+    { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)-- -" },
+    { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)-- -" },
 ];
 
 let jsonTestAbort = false;
 
-/** Collect leaf (or all scalar) paths from a JSON value */
-function collectJsonLeafPaths(obj, prefix, leafOnly, out) {
+/**
+ * Try to decode a string as Base64 and parse the result as JSON.
+ * Returns { decoded, json, urlSafe } or null if not Base64-JSON.
+ */
+function tryParseBase64Json(str) {
+    if (typeof str !== "string" || !looksLikeBase64(str)) return null;
+    try {
+        const decoded = tryDecodeBase64(str);
+        const trimmed = decoded.trim();
+        if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) return null;
+        const json = JSON.parse(trimmed);
+        const urlSafe = /[-_]/.test(str) && !/[+/]/.test(str);
+        return { decoded, json, urlSafe };
+    } catch (e) {
+        return null;
+    }
+}
+
+/** Collect leaf (or all scalar) paths from a JSON value.
+ *  Base64-encoded JSON values are expanded into virtual sub-paths:
+ *    outerKey@b64:inner.path
+ *    outer@b64:mid@b64:inner.path   (nested Base64-JSON, up to depth 5)
+ *  so every inner value is tested individually.
+ */
+function collectJsonLeafPaths(obj, prefix, leafOnly, out, b64Depth) {
     out = out || [];
+    b64Depth = b64Depth || 0;
     if (obj === null || obj === undefined) {
         if (prefix) out.push({ path: prefix, value: obj, type: "null" });
         return out;
     }
     const ty = typeof obj;
     if (ty !== "object") {
+        // Expand Base64 that holds JSON → test each inner value (nested supported)
+        if (typeof obj === "string" && b64Depth < 5) {
+            const b64j = tryParseBase64Json(obj);
+            if (b64j) {
+                const innerLeaves = collectJsonLeafPaths(b64j.json, "", leafOnly, [], b64Depth + 1);
+                if (innerLeaves.length) {
+                    innerLeaves.forEach((il) => {
+                        out.push({
+                            path: (prefix || "") + "@b64:" + il.path,
+                            value: il.value,
+                            type: il.type,
+                            isBase64Json: true,
+                            outerPath: prefix || "",
+                            innerPath: il.path,
+                            originalB64: obj,
+                            b64Depth: b64Depth + 1
+                        });
+                    });
+                    return out;
+                }
+            }
+        }
         if (prefix) out.push({ path: prefix, value: obj, type: ty });
         return out;
     }
@@ -623,7 +689,7 @@ function collectJsonLeafPaths(obj, prefix, leafOnly, out) {
         }
         obj.forEach((item, i) => {
             const p = prefix ? prefix + "[" + i + "]" : "[" + i + "]";
-            collectJsonLeafPaths(item, p, leafOnly, out);
+            collectJsonLeafPaths(item, p, leafOnly, out, b64Depth);
         });
         return out;
     }
@@ -633,20 +699,142 @@ function collectJsonLeafPaths(obj, prefix, leafOnly, out) {
     }
     keys.forEach((k) => {
         const p = prefix ? prefix + "." + k : k;
-        collectJsonLeafPaths(obj[k], p, leafOnly, out);
+        collectJsonLeafPaths(obj[k], p, leafOnly, out, b64Depth);
     });
     return out;
 }
 
-/** Deep-clone and APPEND payload to ONE value only.
- *  - Keys are never touched
- *  - Only the value at `path` gets: originalValue + payload
- *  - All other fields stay unchanged
+/**
+ * Heuristic Base64 detection (classic + URL-safe).
+ * Requires successful atob and mostly printable result.
  */
-function setJsonPathValue(root, path, payload) {
-    const clone = JSON.parse(JSON.stringify(root));
-    if (!path) return clone;
+function looksLikeBase64(str) {
+    if (typeof str !== "string") return false;
+    const s = str.trim();
 
+    // Too short → almost always false positive (tokens, ids, words)
+    if (s.length < 16) return false;
+
+    // Strict alphabet (classic or URL-safe) + optional padding
+    if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(s)) return false;
+
+    // Reject pure hex / pure digits (UUIDs without dashes, hashes, numeric ids)
+    if (/^[0-9]+$/.test(s)) return false;
+    if (/^[0-9a-fA-F]+$/.test(s) && s.length % 2 === 0) return false;
+
+    // Must look "encoded": mix of case OR has +/ OR has padding OR has -_
+    const hasUpper = /[A-Z]/.test(s);
+    const hasLower = /[a-z]/.test(s);
+    const hasPlusSlash = /[+/]/.test(s);
+    const hasUrlSafe = /[-_]/.test(s);
+    const hasPad = /=/.test(s);
+    if (!(hasPad || hasPlusSlash || hasUrlSafe || (hasUpper && hasLower))) {
+        return false;
+    }
+
+    // Length must be valid for Base64 (mod 4), allowing missing pad
+    const bare = s.replace(/=+$/, "");
+    if (bare.length % 4 === 1) return false; // impossible
+    const padLen = (4 - (bare.length % 4)) % 4;
+    if (padLen === 3) return false;
+    // If padding is present, it must be exact
+    if (hasPad) {
+        const m = s.match(/=+$/);
+        if (!m || m[0].length !== padLen) return false;
+        if (s.length % 4 !== 0) return false;
+    }
+
+    try {
+        const padded = bare.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padLen);
+        const decoded = atob(padded);
+        if (!decoded || decoded.length < 4) return false;
+
+        // Round-trip: re-encode should match (canonical check) – strongest filter
+        let round = btoa(decoded);
+        if (hasUrlSafe && !hasPlusSlash) {
+            round = round.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            const bareRound = round;
+            const bareOrig = bare;
+            if (bareRound !== bareOrig) return false;
+        } else {
+            // compare without forcing pad on original
+            const normOrig = bare.replace(/-/g, "+").replace(/_/g, "/");
+            const normRound = round.replace(/=+$/, "");
+            if (normRound !== normOrig) return false;
+        }
+
+        // Decoded should be mostly printable text (not random binary)
+        let printable = 0;
+        for (let i = 0; i < decoded.length; i++) {
+            const c = decoded.charCodeAt(i);
+            if ((c >= 32 && c <= 126) || c === 9 || c === 10 || c === 13) printable++;
+        }
+        if ((printable / decoded.length) < 0.75) return false;
+
+        // Reject if decoded is still only hex-like short noise
+        if (/^[0-9a-fA-F\s-]+$/.test(decoded) && decoded.replace(/\s/g, "").length < 12) {
+            return false;
+        }
+
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function tryDecodeBase64(str) {
+    const s = String(str).trim();
+    const padLen = (4 - (s.length % 4)) % 4;
+    const padded = s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padLen);
+    return atob(padded);
+}
+
+function encodeBase64(str, urlSafe) {
+    const b64 = btoa(String(str));
+    if (urlSafe) return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return b64;
+}
+
+/**
+ * Inject payload into ONE scalar value only (never into key names).
+ * - Normal string/number: value + payload
+ * - Plain Base64 (not JSON): decode → append → re-encode (preserves URL-safe)
+ * - Base64 of JSON: should be handled via setJsonPathValue with @b64: paths
+ * Returns { value, encoding }  encoding = "base64"|"base64url"|null
+ */
+function injectIntoValue(oldVal, payload) {
+    const old = oldVal == null ? "" : String(oldVal);
+    const pl = String(payload);
+
+    // Plain Base64 (string that is NOT valid JSON after decode)
+    if (looksLikeBase64(old)) {
+        const b64j = tryParseBase64Json(old);
+        if (!b64j) {
+            // pure Base64 string (not JSON) → classic decode/append/re-encode
+            try {
+                const decoded = tryDecodeBase64(old);
+                const injected = decoded + pl;
+                const urlSafe = /[-_]/.test(old) && !/[+/]/.test(old);
+                return {
+                    value: encodeBase64(injected, urlSafe),
+                    encoding: urlSafe ? "base64url" : "base64"
+                };
+            } catch (e) { /* fall through */ }
+        }
+        // Base64-JSON is intentionally NOT appended here – handled by expanded paths
+    }
+    return { value: old + pl, encoding: null };
+}
+
+/**
+ * Inject payload into a value at an inner path of a (possibly nested) object.
+ * Used for Base64-JSON expansion.
+ */
+function injectIntoJsonValue(obj, path, payload) {
+    if (!path) {
+        // inject into all leaves (fallback)
+        return injectAllLeaves(obj, payload);
+    }
     const tokens = [];
     const re = /([^[.\]]+)|\[(\d+)\]/g;
     let m;
@@ -654,20 +842,189 @@ function setJsonPathValue(root, path, payload) {
         if (m[1] !== undefined) tokens.push(m[1]);
         else tokens.push(parseInt(m[2], 10));
     }
-    if (!tokens.length) return clone;
+    if (!tokens.length) return { obj, newValue: null };
+
+    const clone = JSON.parse(JSON.stringify(obj));
+    let cur = clone;
+    for (let i = 0; i < tokens.length - 1; i++) {
+        const tok = tokens[i];
+        if (cur == null || typeof cur !== "object") return { obj: clone, newValue: null };
+        cur = cur[tok];
+    }
+    const last = tokens[tokens.length - 1];
+    let newValue = null;
+    if (cur != null && typeof cur === "object" && Object.prototype.hasOwnProperty.call(cur, last)) {
+        const old = cur[last];
+        if (typeof old === "string" || typeof old === "number") {
+            cur[last] = String(old) + String(payload);
+            newValue = cur[last];
+        }
+    }
+    return { obj: clone, newValue };
+}
+
+/** Append payload to every string/number leaf (used by applyPayloadToJsonBody etc.).
+ *  Base64-JSON values (nested up to depth 5) are decoded → inject into inner leaves → re-encoded.
+ */
+function injectAllLeaves(obj, payload, b64Depth) {
+    b64Depth = b64Depth || 0;
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+            if (obj[i] !== null && typeof obj[i] === "object") {
+                injectAllLeaves(obj[i], payload, b64Depth);
+            } else if (typeof obj[i] === "string" || typeof obj[i] === "number") {
+                // Expand nested Base64-JSON inside array elements too
+                const b64j = (typeof obj[i] === "string" && b64Depth < 5) ? tryParseBase64Json(obj[i]) : null;
+                if (b64j) {
+                    const inner = injectAllLeaves(JSON.parse(JSON.stringify(b64j.json)), payload, b64Depth + 1);
+                    obj[i] = encodeBase64(JSON.stringify(inner), b64j.urlSafe);
+                } else {
+                    obj[i] = String(obj[i]) + String(payload);
+                }
+            }
+        }
+        return obj;
+    }
+    Object.keys(obj).forEach((k) => {
+        const v = obj[k];
+        if (v !== null && typeof v === "object") {
+            injectAllLeaves(v, payload, b64Depth);
+        } else if (typeof v === "string" || typeof v === "number") {
+            // If this leaf is Base64-JSON → inject into its inner values (recursive for nested b64)
+            const b64j = (typeof v === "string" && b64Depth < 5) ? tryParseBase64Json(v) : null;
+            if (b64j) {
+                const inner = injectAllLeaves(JSON.parse(JSON.stringify(b64j.json)), payload, b64Depth + 1);
+                obj[k] = encodeBase64(JSON.stringify(inner), b64j.urlSafe);
+            } else {
+                obj[k] = String(v) + String(payload);
+            }
+        }
+    });
+    return obj;
+}
+
+/**
+ * Deep-clone root and modify ONLY the value at `path`.
+ * Keys are never renamed or touched.
+ *
+ * Supports expanded Base64-JSON paths (including NESTED Base64-JSON):
+ *   "data@b64:search.term"
+ *     → decode data, inject into search.term, re-encode
+ *   "data@b64:payload@b64:search.term"
+ *     → decode data → get JSON → decode payload → inject into search.term
+ *       → re-encode inner → re-encode outer
+ *
+ * Returns { obj, encoding, newValue }.
+ *
+ * Example:
+ *   root = {"search":{"term":"Laptop","scope":"name"}}
+ *   path = "search.term", payload = "'"
+ *   → {"search":{"term":"Laptop'","scope":"name"}}
+ *
+ * Base64 example:
+ *   root = {"payload":"eyJzZWFyY2giOnsidGVybSI6IkxhcHRvcCIsInNjb3BlIjoibmFtZSJ9fQ=="}
+ *   path = "payload@b64:search.term", payload = "'"
+ *   → {"payload":"<base64 of {\"search\":{\"term\":\"Laptop'\",\"scope\":\"name\"}}>"}
+ *
+ * Nested Base64-JSON example:
+ *   root = {"wrap":"<b64 of {\"inner\":\"<b64 of {\\\"q\\\":\\\"x\\\"}>\"}>"}
+ *   path = "wrap@b64:inner@b64:q", payload = "'"
+ *   → decode wrap → decode inner → q becomes "x'" → re-encode both layers
+ */
+function setJsonPathValue(root, path, payload, b64Depth) {
+    b64Depth = b64Depth || 0;
+    const clone = JSON.parse(JSON.stringify(root));
+    if (!path) return { obj: clone, encoding: null, newValue: null };
+
+    // Handle expanded Base64-JSON path: outer@b64:rest
+    // rest may itself contain @b64: for nested Base64-JSON (handled recursively, max depth 5)
+    const b64Idx = path.indexOf("@b64:");
+    if (b64Idx !== -1 && b64Depth < 5) {
+        const outerPath = path.substring(0, b64Idx);
+        const innerPath = path.substring(b64Idx + 5);
+
+        // Navigate to the outer value that holds the Base64
+        const outerTokens = [];
+        const re = /([^[.\]]+)|\[(\d+)\]/g;
+        let m;
+        while ((m = re.exec(outerPath)) !== null) {
+            if (m[1] !== undefined) outerTokens.push(m[1]);
+            else outerTokens.push(parseInt(m[2], 10));
+        }
+
+        let cur = clone;
+        for (let i = 0; i < outerTokens.length - 1; i++) {
+            const tok = outerTokens[i];
+            if (cur == null || typeof cur !== "object") {
+                return { obj: clone, encoding: null, newValue: null };
+            }
+            cur = cur[tok];
+        }
+        const last = outerTokens.length ? outerTokens[outerTokens.length - 1] : null;
+
+        if (last === null) {
+            return { obj: clone, encoding: null, newValue: null };
+        }
+        if (cur == null || typeof cur !== "object" || !Object.prototype.hasOwnProperty.call(cur, last)) {
+            return { obj: clone, encoding: null, newValue: null };
+        }
+        const b64Str = cur[last];
+        if (typeof b64Str !== "string") {
+            return { obj: clone, encoding: null, newValue: null };
+        }
+
+        const b64j = tryParseBase64Json(b64Str);
+        if (!b64j) {
+            // Fallback: treat as plain Base64 string (decode → append → re-encode)
+            const inj = injectIntoValue(b64Str, payload);
+            cur[last] = inj.value;
+            return { obj: clone, encoding: inj.encoding, newValue: inj.value };
+        }
+
+        // Recurse into the decoded JSON with the remaining path.
+        // This supports nested Base64-JSON: innerPath may contain further @b64:
+        // e.g. path = "wrap@b64:inner@b64:q" → innerPath = "inner@b64:q"
+        const innerResult = setJsonPathValue(b64j.json, innerPath, payload, b64Depth + 1);
+        const newJsonStr = JSON.stringify(innerResult.obj);
+        const newB64 = encodeBase64(newJsonStr, b64j.urlSafe);
+        cur[last] = newB64;
+        return {
+            obj: clone,
+            encoding: b64j.urlSafe ? "base64url" : "base64",
+            newValue: newB64
+        };
+    }
+
+    // Normal path (no @b64:)
+    const tokens = [];
+    const re = /([^[.\]]+)|\[(\d+)\]/g;
+    let m;
+    while ((m = re.exec(path)) !== null) {
+        if (m[1] !== undefined) tokens.push(m[1]);
+        else tokens.push(parseInt(m[2], 10));
+    }
+    if (!tokens.length) return { obj: clone, encoding: null, newValue: null };
 
     let cur = clone;
     for (let i = 0; i < tokens.length - 1; i++) {
         const tok = tokens[i];
-        if (cur == null || typeof cur !== "object") return clone;
+        if (cur == null || typeof cur !== "object") {
+            return { obj: clone, encoding: null, newValue: null };
+        }
         cur = cur[tok];
     }
     const last = tokens[tokens.length - 1];
-    if (cur != null && typeof cur === "object") {
-        const old = cur[last];
-        cur[last] = String(old == null ? "" : old) + String(payload);
+    let encoding = null;
+    let newValue = null;
+    if (cur != null && typeof cur === "object" && Object.prototype.hasOwnProperty.call(cur, last)) {
+        const inj = injectIntoValue(cur[last], payload);
+        cur[last] = inj.value;
+        encoding = inj.encoding;
+        newValue = inj.value;
     }
-    return clone;
+    return { obj: clone, encoding, newValue };
 }
 
 function fetchJsonTestOnce(url, method, body, headers, sendCookies) {
@@ -725,9 +1082,16 @@ function renderJsonTestResults(results) {
 
     results.forEach((r, i) => {
         const orig = r.originalValue == null ? "null" : String(r.originalValue);
-        const origShort = orig.length > 28 ? orig.substring(0, 25) + "…" : orig;
-        const plShort = (r.payloadName || r.payload || "").substring(0, 24);
-        const label = `${r.path} = ${origShort} + ${plShort}${(r.payload || "").length > 24 ? "…" : ""}`;
+        const origShort = orig.length > 22 ? orig.substring(0, 20) + "…" : orig;
+        const newV = r.newValue != null ? String(r.newValue) : (orig + (r.payload || ""));
+        const newShort = newV.length > 28 ? newV.substring(0, 25) + "…" : newV;
+        const encTag = r.encoding ? ` [${r.encoding}]` : "";
+        // Friendly path display for Base64-JSON expansions: outer → inner
+        const displayPath = (r.path || "").includes("@b64:")
+            ? (r.path || "").replace(/@b64:/g, " → ")
+            : (r.path || "");
+        // Klar: path: "alt" → "neu"  (Value, nicht Key)
+        const label = `${displayPath}: "${origShort}" → "${newShort}"${encTag}`;
 
         let color = "#888";
         let badge = "clean";
@@ -742,9 +1106,14 @@ function renderJsonTestResults(results) {
             badge = "TIME";
         }
 
+        const titleExtra = r.encoding
+            ? ( (r.path || "").includes("@b64:")
+                ? " | encoding: " + r.encoding + " (Base64-JSON: decode → inject inner value → re-encode)"
+                : " | encoding: " + r.encoding + " (decode→append→re-encode)" )
+            : "";
         html += `<div style="padding:4px 0;border-bottom:1px solid #1a2f25;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <span style="color:${color};font-weight:600;min-width:48px">[${badge}]</span>
-            <span style="flex:1;word-break:break-all" title="${escapeHtml(r.path + ' | orig: ' + orig + ' | payload: ' + (r.payload || ''))}">${escapeHtml(label)}</span>
+            <span style="flex:1;word-break:break-all" title="${escapeHtml(r.path + ' | orig: ' + orig + ' | new: ' + newV + ' | payload: ' + (r.payload || '') + titleExtra)}">${escapeHtml(label)}</span>
             <span style="color:#666">${r.status || "-"} · ${r.ms}ms · ${(r.body || "").length}B</span>
             <button class="btn-secondary jsont-load-btn" data-idx="${i}" style="font-size:10px;padding:2px 6px">→ Body</button>
         </div>`;
@@ -790,9 +1159,20 @@ async function runJsonKeysSqliTest() {
         return;
     }
 
-    const bodyText = (document.getElementById("testerBody")?.value || "").trim();
+    let bodyText = (document.getElementById("testerBody")?.value || "").trim();
+    // Tolerate accidental trailing payload from older "append at end" behaviour
+    // e.g. {...}'  or  {...}' OR 1=1--
+    if (bodyText && (bodyText.startsWith("{") || bodyText.startsWith("["))) {
+        const repaired = bodyText.replace(/[}\]]\s*['"`].*$/, (m) => m[0]);
+        if (repaired !== bodyText) {
+            log((typeof t === "function" ? t("log.trailingPayloadRemoved") : "Hinweis: trailing Payload am JSON-Ende entfernt →") + " " + repaired.substring(0, 60) + "…");
+            bodyText = repaired;
+            const ta = document.getElementById("testerBody");
+            if (ta) ta.value = bodyText;
+        }
+    }
     if (!bodyText || !(bodyText.startsWith("{") || bodyText.startsWith("["))) {
-        log(typeof t === "function" ? t("jsontest.noJson") : "Kein gültiges JSON im Body", "warn");
+        log(typeof t === "function" ? t("jsontest.noJson") : "Kein gültiges JSON im Body – bitte JSON in das Body-Feld legen", "warn");
         return;
     }
 
@@ -844,30 +1224,43 @@ async function runJsonKeysSqliTest() {
     jsonTestAbort = false;
     if (btn) btn.disabled = true;
     if (abortBtn) abortBtn.style.display = "inline-block";
-    const total = leaves.length * payloads.length;
+    if (resultsBox) resultsBox.style.display = "none";
+
+    showJsonExplorer(bodyText);
+
+    // Alle Leaf-Values – Keys werden nie angefasst
+    const testLeaves = leaves.slice();
+    const total = testLeaves.length * payloads.length;
     if (progress) {
         progress.style.display = "block";
         progress.textContent = typeof t === "function"
             ? t("jsontest.starting", { total })
-            : `Starte… 0 / ${total}  (${leaves.length} Keys × ${payloads.length} Payloads)`;
+            : `Starte… 0 / ${total}  (${testLeaves.length} Values × ${payloads.length} Payloads)`;
     }
-    if (resultsBox) resultsBox.style.display = "none";
 
-    showJsonExplorer(bodyText);
-    log(`JSON-Key-Test: ${leaves.length} Values einzeln (Payload anhängen), ${payloads.length} Payload(s)`);
+    log((typeof t === "function"
+        ? t("log.jsonKeyTestInject", { count: testLeaves.length })
+        : `JSON-Key-Test: ${testLeaves.length} Values einzeln injizieren (nie Keys, nur Values)`) +
+        (testLeaves.length ? " → " + testLeaves.map((l) => l.path).slice(0, 8).join(", ") + (testLeaves.length > 8 ? "…" : "") : ""));
 
     const allResults = [];
     let done = 0;
 
-    // Jeder Value einzeln: pro Request wird NUR an diesen einen Value angehängt
-    for (const leaf of leaves) {
+    // Pro Request: NUR EINEN Value ändern (Keys bleiben unangetastet)
+    // Beispiel: path=search.term, payload='  →  {"search":{"term":"Laptop'","scope":"name"}}
+    for (const leaf of testLeaves) {
         if (jsonTestAbort) break;
         for (const p of payloads) {
             if (jsonTestAbort) break;
 
             let injectedObj;
+            let usedEncoding = null;
+            let newValue = null;
             try {
-                injectedObj = setJsonPathValue(root, leaf.path, p.payload);
+                const result = setJsonPathValue(root, leaf.path, p.payload);
+                injectedObj = result.obj;
+                usedEncoding = result.encoding;
+                newValue = result.newValue;
             } catch (e) {
                 allResults.push({
                     path: leaf.path,
@@ -879,12 +1272,29 @@ async function runJsonKeysSqliTest() {
                     status: 0,
                     body: "",
                     ms: 0,
-                    injectedBody: ""
+                    injectedBody: "",
+                    encoding: null,
+                    newValue: null
                 });
                 done++;
                 continue;
             }
             const injectedBody = JSON.stringify(injectedObj);
+
+            // Debug-Log first injection so user sees exactly what is sent
+            if (done === 0) {
+                const pathHint = leaf.isBase64Json
+                    ? leaf.path + " (Base64-JSON inner)"
+                    : leaf.path;
+                const fromStr = JSON.stringify(leaf.value);
+                const toStr = leaf.isBase64Json
+                    ? "(re-encoded Base64 of modified inner JSON)"
+                    : JSON.stringify(newValue);
+                const enc = usedEncoding ? " (" + usedEncoding + ")" : "";
+                log(typeof t === "function"
+                    ? t("log.exampleInjection", { path: pathHint, from: fromStr, to: toStr }) + enc
+                    : `Beispiel-Injection [${pathHint}]: ${fromStr} → ${toStr}${enc}`);
+            }
 
             const start = performance.now();
             const resp = await fetchJsonTestOnce(baseUrl, method, injectedBody, headers, sendCookies);
@@ -900,15 +1310,18 @@ async function runJsonKeysSqliTest() {
                 body: resp.body || "",
                 ms,
                 error: resp.error,
-                injectedBody
+                injectedBody,
+                encoding: usedEncoding,
+                newValue,
+                isBase64Json: !!leaf.isBase64Json
             });
             done++;
 
             if (progress) {
-                const origHint = leaf.value == null ? "null" : String(leaf.value).substring(0, 20);
-                progress.textContent = typeof t === "function"
-                    ? t("jsontest.progress", { done, total, name: leaf.path })
-                    : `Teste… ${done} / ${total}  (${leaf.path}=${origHint} + payload)`;
+                const origHint = leaf.value == null ? "null" : String(leaf.value).substring(0, 18);
+                const encHint = usedEncoding ? ` [${usedEncoding}]` : "";
+                const pathHint = leaf.isBase64Json ? leaf.path.replace(/@b64:/g, " → ") : leaf.path;
+                progress.textContent = `Teste… ${done} / ${total}  (${pathHint}: "${origHint}"${encHint})`;
             }
 
             await new Promise((r) => setTimeout(r, 100));
@@ -961,5 +1374,9 @@ document.getElementById("jsonTestAbortBtn")?.addEventListener("click", () => {
     global.netParamMap = netParamMap;
     global.showJsonExplorer = showJsonExplorer;
     global.runJsonKeysSqliTest = runJsonKeysSqliTest;
+    global.injectAllLeaves = injectAllLeaves;
+    global.tryParseBase64Json = tryParseBase64Json;
+    global.looksLikeBase64 = looksLikeBase64;
+    global.setJsonPathValue = setJsonPathValue;
 
 })(typeof window !== "undefined" ? window : this);
