@@ -176,6 +176,34 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                         <button id="copyCurl2" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">cURL</button>
                         <button id="injectPage2" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
                     </div>
+                    <!-- Header SQLi Test -->
+                    <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
+                        <button id="testAllHeadersBtn" class="btn-primary" style="font-size:12px" data-i18n="hdrtest.btn">
+                            🔍 Alle Header auf SQLi testen
+                        </button>
+                        <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" data-i18n-title="hdrtest.riskyOnlyTitle" title="Nur bekannte risky Header testen">
+                            <input type="checkbox" id="hdrTestRiskyOnly" checked>
+                            <span data-i18n="hdrtest.riskyOnly">nur risky</span>
+                        </label>
+                        <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" data-i18n-title="hdrtest.usePayloadTitle" title="Aktuellen Payload verwenden statt Detection-Set">
+                            <input type="checkbox" id="hdrTestUsePayload" checked>
+                            <span data-i18n="hdrtest.usePayload">aktuellen Payload</span>
+                        </label>
+                        <button id="hdrTestAbortBtn" class="btn-secondary" style="font-size:11px;display:none" data-i18n="hdrtest.abort">Abbrechen</button>
+                    </div>
+                    <div id="hdrTestProgress" style="margin-top:6px;font-size:11px;color:#888;display:none"></div>
+                    <details open>
+                        <summary data-i18n="hdrTestResults">
+                            Ergebnis
+                        </summary>
+
+                        <div id="hdrTestResults" style="margin-top:8px;display:none"></div>
+
+                    </details>
+
+
+
+                    <!-- Body -->
                     <label style="margin-top:8px;display:block"><span data-i18n="req.body">Body</span> <span class="hint" style="text-transform:none;font-weight:400" data-i18n="req.bodyHint">(POST / PUT / PATCH …)</span></label>
 
                     <textarea id="testerBody" rows="3" data-i18n-placeholder="req.bodyPlaceholder" placeholder="id=1&amp;name=test  or  {&quot;id&quot;:1}"></textarea>
@@ -196,11 +224,31 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                         </div>
                         <div id="jsonTree" class="json-tree"></div>
                         <div id="jsonPathHint" class="json-path-hint"></div>
-                        <div class="row" style="margin-top:4px;gap:6px">
+                        <div class="row" style="margin-top:4px;gap:6px;flex-wrap:wrap">
                             <button id="jsonToPayload" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonToPayload">→ Payload</button>
                             <button id="jsonToUrl" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonToUrl">→ URL (?key=)</button>
                             <button id="jsonCopyPath" class="btn-secondary" style="font-size:11px" data-i18n="req.jsonCopyPath">Pfad kopieren</button>
                         </div>
+                        <!-- JSON Keys SQLi Mass-Test -->
+                        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
+                            <button id="testAllJsonKeysBtn" class="btn-primary" style="font-size:12px" data-i18n="jsontest.btn">
+                                🔍 Alle JSON-Keys auf SQLi testen
+                            </button>
+                            <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" data-i18n-title="jsontest.usePayloadTitle" title="Aktuellen Payload verwenden statt Detection-Set">
+                                <input type="checkbox" id="jsonTestUsePayload" checked>
+                                <span data-i18n="jsontest.usePayload">aktuellen Payload</span>
+                            </label>
+                            <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" data-i18n-title="jsontest.leafOnlyTitle" title="Nur Blatt-Werte (keine Objekte/Arrays)">
+                                <input type="checkbox" id="jsonTestLeafOnly" checked>
+                                <span data-i18n="jsontest.leafOnly">nur Blätter</span>
+                            </label>
+                            <button id="jsonTestAbortBtn" class="btn-secondary" style="font-size:11px;display:none" data-i18n="jsontest.abort">Abbrechen</button>
+                        </div>
+                        <div id="jsonTestProgress" style="margin-top:6px;font-size:11px;color:#888;display:none"></div>
+                        <details open style="margin-top:6px">
+                            <summary data-i18n="jsontest.resultsTitle">JSON-Key-Test Ergebnis</summary>
+                            <div id="jsonTestResults" style="margin-top:8px;display:none"></div>
+                        </details>
                     </div>
                 </div>
             </details>
@@ -419,6 +467,8 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     <option value="ru" data-i18n="opt.lang.ru">Русский</option>
                     <option value="ja" data-i18n="opt.lang.ja">日本語</option>
                     <option value="zh" data-i18n="opt.lang.zh">中文</option>
+                    <option value="tr" data-i18n="opt.lang.tr">Türkçe</option>
+                    <option value="ar" data-i18n="opt.lang.ar">العربية</option>
                 </select>
             </div>
         </section>

