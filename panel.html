@@ -4,24 +4,20 @@
     <meta charset="UTF-8">
     <title>SQLiBar</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Parameter discovery extras */
-        
-    </style>
+    
 </head>
 <body>
     <div class="header">
         <h3 data-i18n="header.title">SQLiBar</h3>
         <div class="tabs">
             <button class="tab-btn active" data-tab="tester" data-i18n="tab.tester">URL / Payload</button>
-            <!-- <button class="tab-btn" data-tab="request">Request Builder</button>-->
             <button class="tab-btn" data-tab="network" data-i18n="tab.network">Live Network</button>
             <button class="tab-btn" data-tab="tools" data-i18n="tab.tools">Encode</button>
             <button class="tab-btn" data-tab="options" data-i18n="tab.options">Optionen</button>
         </div>
     </div>
     <!-- ===================== TAB 1: URL / Payload Tester ===================== -->
-    <div id="tester" class="tab-content active">
+    <div id="tester" class="tab-content active subtab-mode">
 
 
         <section class="section">
@@ -32,12 +28,26 @@
                 <button id="copyUrl" class="btn-secondary" data-i18n="url.copy" data-i18n-title="url.copy" title="Copy URL">📋 URL kopieren</button>
                 <button id="copyCurl" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">cURL</button>
                 <!--<button id="openUrl" class="btn-secondary" title="In aktuellem Tab öffnen">↗ Open</button> -->
-                
+
                 <button id="injectPage" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
             </div>
         </section>
+
+        <!-- Sub-tabs: radio inputs (must be siblings of .panels-row for CSS ~) -->
+        <input type="radio" name="testerSubTab" id="subtab-presets" checked>
+        <input type="radio" name="testerSubTab" id="subtab-request">
+        <input type="radio" name="testerSubTab" id="subtab-pageparams">
+        <input type="radio" name="testerSubTab" id="subtab-sqli">
+        
+        <div class="sub-tabs" id="testerSubTabs" role="tablist">
+            <label class="sub-tab-btn" for="subtab-presets" data-i18n="presets.summary">Payload-Presets</label>
+            <label class="sub-tab-btn" for="subtab-request" data-i18n="req.summary">Request-Optionen</label>
+            <label class="sub-tab-btn" for="subtab-pageparams"><span data-i18n="page.summary">Parameter-Scanner</span> <span id="pageParamStatsBtn"></span></label>
+            <label class="sub-tab-btn" for="subtab-sqli" data-i18n="sqli.summary">SQLi-Erkennung</label>
+            
+        </div>
         <div class="panels-row">
-            <details class="section response-view">
+            <details class="section response-view" data-subtab="presets" open>
                 <summary data-i18n="presets.summary">Payload-Presets</summary>
                 <div>
                     <select id="presetCategory">
@@ -61,7 +71,7 @@
                     </div>
                 </div>
             </details>
-            <details class="section response-view">
+            <details class="section response-view" data-subtab="request" open>
                 <summary data-i18n="req.summary">Request-Optionen</summary>
                 <div style="padding-top:1px">
                     <div class="row" style="margin-bottom:6px;align-items:center">
@@ -252,7 +262,7 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     </div>
                 </div>
             </details>
-            <details class="section response-view">
+            <details class="section response-view" data-subtab="pageparams" open>
                 <summary><span data-i18n="page.summary">Seiten-Parameter-Scanner</span> <span id="pageParamStats"></span></summary>
                 <div style="padding-top:1px">
                     <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px">
@@ -273,7 +283,7 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     </div>
                 </div>
             </details>
-            <details class="section response-view">
+            <details class="section response-view" data-subtab="sqli" open>
                 <summary data-i18n="sqli.summary">SQLi-Erkennung</summary>
                 <div style="padding-top:1px">
                     <div id="sqliDetectBox">
@@ -302,220 +312,228 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     <div id="diffBox" style="margin-top:8px;display:none"></div>
                 </div>
             </details>
-            <details id="testerResponseDetails" class="response-view">
-                <summary data-i18n="resp.summary">Seiten-Response</summary>
-                <div class="response-search-bar">
-                    <input id="testerResponseSearch" type="text" data-i18n-placeholder="resp.search" placeholder="In Response suchen…">
-                    <button id="testerSearchPrev">↑</button>
-                    <button id="testerSearchNext">↓</button>
-                    <label>
-                        <input id="testerSearchCase" type="checkbox"> Aa
-                    </label>
-                    <span id="testerSearchInfo">0 / 0</span>
-                    <div class="response-actions">
-                        <button id="copyResponseBtn" class="btn-secondary" data-i18n="resp.copyResponse">Response kopieren</button>
-                        <button id="copyBodyBtn" class="btn-secondary" data-i18n="resp.copyBody">Nur Body kopieren</button>
+
+
+            
+                <details id="testerResponseDetails" class="section response-view" open>
+                    <summary data-i18n="resp.summary">Seiten-Response</summary>
+                    <div class="response-search-bar">
+                        <input id="testerResponseSearch" type="text" data-i18n-placeholder="resp.search" placeholder="In Response suchen…">
+                        <button id="testerSearchPrev">↑</button>
+                        <button id="testerSearchNext">↓</button>
+                        <label>
+                            <input id="testerSearchCase" type="checkbox"> Aa
+                        </label>
+                        <span id="testerSearchInfo">0 / 0</span>
+                        <div class="response-actions">
+                            <button id="copyResponseBtn" class="btn-secondary" data-i18n="resp.copyResponse">Response kopieren</button>
+                            <button id="copyBodyBtn" class="btn-secondary" data-i18n="resp.copyBody">Nur Body kopieren</button>
+                        </div>
+                    </div>
+                    <pre id="testerResponse" data-placeholder="Response..."></pre>
+                </details>
+            
+        </div><!-- /.panels-row -->
+       
+    </div>
+
+        <!-- ===================== TAB: Live Network ===================== -->
+        <div id="network" class="tab-content">
+            <section class="section">
+                <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <label style="margin:0" data-i18n="net.title">Live HTTP Requests</label>
+                    <div class="row" style="gap:6px;flex-wrap:wrap">
+                        <input id="netSearch" type="text" data-i18n-placeholder="net.search" placeholder="URL / Methode suchen…" style="width:140px;flex:1">
+                        <select id="netFilter" style="width:110px">
+                            <option value="all" data-i18n="net.all">Alle</option>
+                            <option value="xhr" data-i18n="net.xhr">XHR / Fetch</option>
+                            <option value="doc" data-i18n="net.doc">Dokumente</option>
+                            <option value="post" data-i18n="net.post">Nur POST</option>
+                        </select>
+                        <!-- Pause/Start Button -->
+                        <button id="toggleNetRecording" class="btn-primary" style="font-size:11px;padding:4px 10px" data-i18n="net.pause">⏸ Pause</button>
+                        <button id="clearNetwork" class="btn-secondary" style="font-size:11px;padding:4px 10px" data-i18n="net.clear">Leeren</button>
                     </div>
                 </div>
-                <pre id="testerResponse" data-placeholder="Response..."></pre>
+                <div id="networkList" class="network-list">
+                    <div class="network-empty" data-i18n="net.empty">Warte auf Requests… navigiere oder interagiere mit der Seite.</div>
+                </div>
+                <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
+                    <button id="netCopyUrl" class="btn-secondary" data-i18n="net.copyUrl">URL kopieren</button>
+                    <button id="netToTester" class="btn-primary" data-i18n="net.toTester" data-i18n-title="net.toTester" title="→ Tester">→ Tester</button>
+                    <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="Create cURL">@cURL</button>
+                    <button id="netCopyParams" class="btn-secondary" data-i18n="net.copyParams" data-i18n-title="net.copyParams" title="Params kopieren">Params kopieren</button>
+                    <button id="netReplay" class="btn-secondary" data-i18n="net.replay" data-i18n-title="net.replay" title="↻ Replay">↻ Replay</button>
+                </div>
+                <!-- Request + Response Details (bei Klick auf einen Network-Eintrag) -->
+
+            </section>
+
+            <details class="section">
+                <summary>
+                    <span data-i18n="net.params">Gesammelte Parameter</span> <span id="netParamStats"></span>
+                </summary>
+                <div style="padding-top:1px">
+                    <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+                        <select id="netParamTypeFilter" style="width:100px;font-size:11px">
+                            <option value="all" data-i18n="net.allTypes">Alle Typen</option>
+                            <option value="query">query</option>
+                            <option value="body">body</option>
+                            <option value="json">json</option>
+                            <option value="cookie">cookie</option>
+                            <option value="header">header</option>
+                        </select>
+                        <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" title="Nur Parameter des ausgewählten Requests">
+                            <input type="checkbox" id="netParamOnlySelected"> <span data-i18n="net.onlySelected">nur ausgewählt</span>
+                        </label>
+                        <input id="netParamSearch" type="text" data-i18n-placeholder="net.filterParams" placeholder="Parameter filtern…" style="width:110px">
+                        <button id="clearNetParams" class="btn-secondary" style="font-size:11px;padding:3px 8px" data-i18n="net.clear">Leeren</button>
+                    </div>
+                    <div id="netParamList" class="param-list">
+                        <div class="param-empty" data-i18n="net.paramsEmpty">Parameter aus erfassten Requests erscheinen hier automatisch.</div>
+                    </div>
+                </div>
             </details>
-        </div><!-- /.panels-row -->
-    </div>
-
-    <!-- ===================== TAB: Live Network ===================== -->
-    <div id="network" class="tab-content">
-        <section class="section">
-            <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-                <label style="margin:0" data-i18n="net.title">Live HTTP Requests</label>
-                <div class="row" style="gap:6px;flex-wrap:wrap">
-                    <input id="netSearch" type="text" data-i18n-placeholder="net.search" placeholder="URL / Methode suchen…" style="width:140px;flex:1">
-                    <select id="netFilter" style="width:110px">
-                        <option value="all" data-i18n="net.all">Alle</option>
-                        <option value="xhr" data-i18n="net.xhr">XHR / Fetch</option>
-                        <option value="doc" data-i18n="net.doc">Dokumente</option>
-                        <option value="post" data-i18n="net.post">Nur POST</option>
+            <pre id="networkDetails" class="network-details" style="display:none;margin-top:10px;max-height:380px;overflow:auto;padding:10px 12px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all;background:var(--bg-input,#0d1510);border:1px solid var(--border,#1a2f25);border-radius:6px"></pre>
+        </div>
+        <!-- ===================== TAB 3: Tools ===================== -->
+        <div id="tools" class="tab-content">
+            <section class="section">
+                <label data-i18n="enc.label">Encode / Decode</label>
+                <textarea id="encodeInput" rows="3" data-i18n-placeholder="enc.placeholder" placeholder="Insert text…"></textarea>
+                <div class="row" style="margin:8px 0;gap:6px;flex-wrap:wrap;align-items:center">
+                    <select id="encodingType" style="flex:1;min-width:160px">
+                        <optgroup label="URL" data-i18n-label="enc.group.url">
+                            <option value="url" data-i18n="enc.type.url">URL Encode</option>
+                            <option value="url2" data-i18n="enc.type.url2">Double URL Encode</option>
+                            <option value="url3" data-i18n="enc.type.url3">Triple URL Encode</option>
+                            <option value="urlsel" data-i18n="enc.type.urlsel">Selective URL (SQLi)</option>
+                        </optgroup>
+                        <optgroup label="Base64" data-i18n-label="enc.group.base64">
+                            <option value="base64" data-i18n="enc.type.base64">Base64</option>
+                            <option value="base64url" data-i18n="enc.type.base64url">Base64 URL-Safe</option>
+                        </optgroup>
+                        <optgroup label="Hex / Binary" data-i18n-label="enc.group.hex">
+                            <option value="hex" data-i18n="enc.type.hex">Hex (spaced)</option>
+                            <option value="hex0x" data-i18n="enc.type.hex0x">Hex (0xAABB…)</option>
+                            <option value="hexslash" data-i18n="enc.type.hexslash">Hex (\x..)</option>
+                            <option value="hexcomma" data-i18n="enc.type.hexcomma">Hex (0xAA,0xBB)</option>
+                            <option value="binary" data-i18n="enc.type.binary">Binary</option>
+                            <option value="ascii" data-i18n="enc.type.ascii">ASCII / Decimal</option>
+                        </optgroup>
+                        <optgroup label="SQL" data-i18n-label="enc.group.sql">
+                            <option value="sqlchar" data-i18n="enc.type.sqlchar">SQL CHAR(65,66)</option>
+                            <option value="sqlcharhex" data-i18n="enc.type.sqlcharhex">SQL CHAR(0x41,…)</option>
+                            <option value="sqlconcat" data-i18n="enc.type.sqlconcat">SQL CONCAT(CHAR…)</option>
+                        </optgroup>
+                        <optgroup label="Unicode / HTML" data-i18n-label="enc.group.unicode">
+                            <option value="unicode" data-i18n="enc.type.unicode">Unicode \u</option>
+                            <option value="unicodeu" data-i18n="enc.type.unicodeu">Unicode %u</option>
+                            <option value="fullwidth" data-i18n="enc.type.fullwidth">Fullwidth Unicode</option>
+                            <option value="html" data-i18n="enc.type.html">HTML Entities</option>
+                        </optgroup>
+                        <optgroup label="Other" data-i18n-label="enc.group.other">
+                            <option value="json" data-i18n="enc.type.json">JSON String</option>
+                            <option value="jwt" data-i18n="enc.type.jwt">JWT Decode</option>
+                            <option value="rot13" data-i18n="enc.type.rot13">ROT13</option>
+                        </optgroup>
                     </select>
-                    <button id="clearNetwork" class="btn-secondary" style="font-size:11px;padding:4px 10px" data-i18n="net.clear">Leeren</button>
+                    <button id="encodeBtn" class="btn-primary" data-i18n="enc.encode">Encode</button>
+                    <button id="decodeBtn" class="btn-secondary" data-i18n="enc.decode">Decode</button>
+                    <button id="swapEncode" class="btn-secondary" data-i18n="enc.swap" data-i18n-title="enc.swapTitle" title="Output ↔ Input">⇅ Swap</button>
                 </div>
-            </div>
-            <div id="networkList" class="network-list">
-                <div class="network-empty" data-i18n="net.empty">Warte auf Requests… navigiere oder interagiere mit der Seite.</div>
-            </div>
-            <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
-                <button id="netCopyUrl" class="btn-secondary" data-i18n="net.copyUrl">URL kopieren</button>
-                <button id="netToTester" class="btn-primary" data-i18n="net.toTester" data-i18n-title="net.toTester" title="→ Tester">→ Tester</button>
-                <button id="netCopyCurl" class="btn-secondary" data-i18n="net.copyCurl" data-i18n-title="url.curl" title="Create cURL">@cURL</button>
-                <button id="netCopyParams" class="btn-secondary" data-i18n="net.copyParams" data-i18n-title="net.copyParams" title="Params kopieren">Params kopieren</button>
-                <button id="netReplay" class="btn-secondary" data-i18n="net.replay" data-i18n-title="net.replay" title="↻ Replay">↻ Replay</button>
-            </div>
-            <!-- Request + Response Details (bei Klick auf einen Network-Eintrag) -->
-
-        </section>
-
-        <details class="section">
-            <summary>
-                <span data-i18n="net.params">Gesammelte Parameter</span> <span id="netParamStats"></span>
-            </summary>
-            <div style="padding-top:1px">
-                <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
-                    <select id="netParamTypeFilter" style="width:100px;font-size:11px">
-                        <option value="all" data-i18n="net.allTypes">Alle Typen</option>
-                        <option value="query">query</option>
-                        <option value="body">body</option>
-                        <option value="json">json</option>
-                        <option value="cookie">cookie</option>
-                        <option value="header">header</option>
-                    </select>
-                    <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" title="Nur Parameter des ausgewählten Requests">
-                        <input type="checkbox" id="netParamOnlySelected"> <span data-i18n="net.onlySelected">nur ausgewählt</span>
+                <div class="row" style="margin:0 0 8px;gap:6px;flex-wrap:wrap;align-items:center">
+                    <label style="margin:0;font-weight:400;text-transform:none;font-size:12px">
+                        <input type="checkbox" id="encLive" checked> <span data-i18n="enc.live">Live</span>
                     </label>
-                    <input id="netParamSearch" type="text" data-i18n-placeholder="net.filterParams" placeholder="Parameter filtern…" style="width:110px">
-                    <button id="clearNetParams" class="btn-secondary" style="font-size:11px;padding:3px 8px" data-i18n="net.clear">Leeren</button>
-                </div>
-                <div id="netParamList" class="param-list">
-                    <div class="param-empty" data-i18n="net.paramsEmpty">Parameter aus erfassten Requests erscheinen hier automatisch.</div>
-                </div>
-            </div>
-        </details>
-        <pre id="networkDetails" class="network-details" style="display:none;margin-top:10px;max-height:380px;overflow:auto;padding:10px 12px;font-size:11px;line-height:1.45;white-space:pre-wrap;word-break:break-all;background:var(--bg-input,#0d1510);border:1px solid var(--border,#1a2f25);border-radius:6px"></pre>
-    </div>
-    <!-- ===================== TAB 3: Tools ===================== -->
-    <div id="tools" class="tab-content">
-        <section class="section">
-            <label data-i18n="enc.label">Encode / Decode</label>
-            <textarea id="encodeInput" rows="3" data-i18n-placeholder="enc.placeholder" placeholder="Insert text…"></textarea>
-            <div class="row" style="margin:8px 0;gap:6px;flex-wrap:wrap;align-items:center">
-                <select id="encodingType" style="flex:1;min-width:160px">
-                    <optgroup label="URL" data-i18n-label="enc.group.url">
+                    <span class="hint" style="font-size:11px" id="encChainHint" data-i18n="enc.chainHint">Chain: optional 2nd stage</span>
+                    <select id="encodingType2" style="min-width:140px;font-size:12px">
+                        <option value="" data-i18n="enc.chainNone">– no 2nd stage –</option>
                         <option value="url" data-i18n="enc.type.url">URL Encode</option>
-                        <option value="url2" data-i18n="enc.type.url2">Double URL Encode</option>
-                        <option value="url3" data-i18n="enc.type.url3">Triple URL Encode</option>
-                        <option value="urlsel" data-i18n="enc.type.urlsel">Selective URL (SQLi)</option>
-                    </optgroup>
-                    <optgroup label="Base64" data-i18n-label="enc.group.base64">
+                        <option value="url2" data-i18n="enc.type.url2short">Double URL</option>
                         <option value="base64" data-i18n="enc.type.base64">Base64</option>
                         <option value="base64url" data-i18n="enc.type.base64url">Base64 URL-Safe</option>
-                    </optgroup>
-                    <optgroup label="Hex / Binary" data-i18n-label="enc.group.hex">
-                        <option value="hex" data-i18n="enc.type.hex">Hex (spaced)</option>
-                        <option value="hex0x" data-i18n="enc.type.hex0x">Hex (0xAABB…)</option>
-                        <option value="hexslash" data-i18n="enc.type.hexslash">Hex (\x..)</option>
-                        <option value="hexcomma" data-i18n="enc.type.hexcomma">Hex (0xAA,0xBB)</option>
-                        <option value="binary" data-i18n="enc.type.binary">Binary</option>
-                        <option value="ascii" data-i18n="enc.type.ascii">ASCII / Decimal</option>
-                    </optgroup>
-                    <optgroup label="SQL" data-i18n-label="enc.group.sql">
-                        <option value="sqlchar" data-i18n="enc.type.sqlchar">SQL CHAR(65,66)</option>
-                        <option value="sqlcharhex" data-i18n="enc.type.sqlcharhex">SQL CHAR(0x41,…)</option>
-                        <option value="sqlconcat" data-i18n="enc.type.sqlconcat">SQL CONCAT(CHAR…)</option>
-                    </optgroup>
-                    <optgroup label="Unicode / HTML" data-i18n-label="enc.group.unicode">
-                        <option value="unicode" data-i18n="enc.type.unicode">Unicode \u</option>
-                        <option value="unicodeu" data-i18n="enc.type.unicodeu">Unicode %u</option>
-                        <option value="fullwidth" data-i18n="enc.type.fullwidth">Fullwidth Unicode</option>
-                        <option value="html" data-i18n="enc.type.html">HTML Entities</option>
-                    </optgroup>
-                    <optgroup label="Other" data-i18n-label="enc.group.other">
-                        <option value="json" data-i18n="enc.type.json">JSON String</option>
-                        <option value="jwt" data-i18n="enc.type.jwt">JWT Decode</option>
-                        <option value="rot13" data-i18n="enc.type.rot13">ROT13</option>
-                    </optgroup>
-                </select>
-                <button id="encodeBtn" class="btn-primary" data-i18n="enc.encode">Encode</button>
-                <button id="decodeBtn" class="btn-secondary" data-i18n="enc.decode">Decode</button>
-                <button id="swapEncode" class="btn-secondary" data-i18n="enc.swap" data-i18n-title="enc.swapTitle" title="Output ↔ Input">⇅ Swap</button>
-            </div>
-            <div class="row" style="margin:0 0 8px;gap:6px;flex-wrap:wrap;align-items:center">
-                <label style="margin:0;font-weight:400;text-transform:none;font-size:12px">
-                    <input type="checkbox" id="encLive" checked> <span data-i18n="enc.live">Live</span>
-                </label>
-                <span class="hint" style="font-size:11px" id="encChainHint" data-i18n="enc.chainHint">Chain: optional 2nd stage</span>
-                <select id="encodingType2" style="min-width:140px;font-size:12px">
-                    <option value="" data-i18n="enc.chainNone">– no 2nd stage –</option>
-                    <option value="url" data-i18n="enc.type.url">URL Encode</option>
-                    <option value="url2" data-i18n="enc.type.url2short">Double URL</option>
-                    <option value="base64" data-i18n="enc.type.base64">Base64</option>
-                    <option value="base64url" data-i18n="enc.type.base64url">Base64 URL-Safe</option>
-                    <option value="hex" data-i18n="enc.type.hexShort">Hex</option>
-                    <option value="hex0x" data-i18n="enc.type.hex0xShort">Hex 0x</option>
-                </select>
-            </div>
-            <textarea id="encodeOutput" rows="4" data-i18n-placeholder="enc.result" placeholder="Result…" style="font-family:ui-monospace,monospace"></textarea>
-            <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
-                <button id="copyEncode" class="btn-secondary" data-i18n="enc.copy">Copy</button>
-                <button id="encToPayload" class="btn-secondary" data-i18n="enc.toPayload" data-i18n-title="enc.toPayloadTitle" title="Result → Payload field">→ Payload</button>
-                <button id="encToUrl" class="btn-secondary" data-i18n="enc.toUrl" data-i18n-title="enc.toUrlTitle" title="Insert result at cursor in URL">→ URL</button>
-                <button id="encToBody" class="btn-secondary" data-i18n="enc.toBody" data-i18n-title="enc.toBodyTitle" title="Result → Request Body">→ Body</button>
-                <button id="clearEncode" class="btn-secondary" data-i18n="enc.clear">Clear</button>
-            </div>
-            <div id="encStatus" style="margin-top:6px;font-size:11px;color:#888"></div>
-        </section>
-    </div>
+                        <option value="hex" data-i18n="enc.type.hexShort">Hex</option>
+                        <option value="hex0x" data-i18n="enc.type.hex0xShort">Hex 0x</option>
+                    </select>
+                </div>
+                <textarea id="encodeOutput" rows="4" data-i18n-placeholder="enc.result" placeholder="Result…" style="font-family:ui-monospace,monospace"></textarea>
+                <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap">
+                    <button id="copyEncode" class="btn-secondary" data-i18n="enc.copy">Copy</button>
+                    <button id="encToPayload" class="btn-secondary" data-i18n="enc.toPayload" data-i18n-title="enc.toPayloadTitle" title="Result → Payload field">→ Payload</button>
+                    <button id="encToUrl" class="btn-secondary" data-i18n="enc.toUrl" data-i18n-title="enc.toUrlTitle" title="Insert result at cursor in URL">→ URL</button>
+                    <button id="encToBody" class="btn-secondary" data-i18n="enc.toBody" data-i18n-title="enc.toBodyTitle" title="Result → Request Body">→ Body</button>
+                    <button id="clearEncode" class="btn-secondary" data-i18n="enc.clear">Clear</button>
+                </div>
+                <div id="encStatus" style="margin-top:6px;font-size:11px;color:#888"></div>
+            </section>
+        </div>
 
-    <!-- ===================== TAB: Options / Theme ===================== -->
-    <div id="options" class="tab-content">
-        <section class="section">
-            <label data-i18n="opt.language">Language</label>
-            <p class="hint" style="margin-bottom:10px" data-i18n="opt.languageHint">Choose interface language.</p>
-            <div class="row" style="gap:10px;align-items:center">
-                <select id="langSelect" style="min-width:160px">
-                    <option value="en" data-i18n="opt.lang.en">English</option>
-                    <option value="de" data-i18n="opt.lang.de">Deutsch</option>
-                    <option value="es" data-i18n="opt.lang.es">Español</option>
-                    <option value="fr" data-i18n="opt.lang.fr">Français</option>
-                    <option value="pt" data-i18n="opt.lang.pt">Português</option>
-                    <option value="ru" data-i18n="opt.lang.ru">Русский</option>
-                    <option value="ja" data-i18n="opt.lang.ja">日本語</option>
-                    <option value="zh" data-i18n="opt.lang.zh">中文</option>
-                    <option value="tr" data-i18n="opt.lang.tr">Türkçe</option>
-                    <option value="ar" data-i18n="opt.lang.ar">العربية</option>
-                </select>
-            </div>
-        </section>
-        <section class="section">
-            <label data-i18n="opt.colorScheme">Farbschema</label>
-            <p class="hint" style="margin-bottom:10px" data-i18n="opt.colorHint">Wähle ein Farbschema.</p>
-            <div id="themeGrid" class="theme-grid"></div>
-        </section>
-        <section class="section">
-            <label data-i18n="opt.customAccent">Eigener Akzent</label>
-            <div class="row" style="gap:10px;align-items:center">
-                <input type="color" id="customAccent" value="#00ff66" style="width:48px;height:32px;padding:2px;cursor:pointer;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm)">
-                <input type="text" id="customAccentHex" value="#00ff66" style="width:100px;font-family:var(--mono)" maxlength="7" placeholder="#00ff66">
-                <button id="applyCustomAccent" class="btn-primary" data-i18n="opt.apply">Anwenden</button>
-                <button id="resetThemeBtn" class="btn-secondary" data-i18n="opt.reset">Standard zurücksetzen</button>
-            </div>
-        </section>
-        <section class="section">
-            <label data-i18n="opt.preview">Vorschau</label>
-            <div class="theme-preview">
-                <button class="btn-primary" data-i18n="opt.primaryBtn">Primary Button</button>
-                <button class="btn-secondary" data-i18n="opt.secondaryBtn">Secondary</button>
-                <span class="theme-preview-text"><span data-i18n="opt.accentText">Akzent-Text ·</span> <code style="color:var(--primary)">var(--primary)</code></span>
-                <div class="theme-preview-bar"></div>
-            </div>
-        </section>
+        <!-- ===================== TAB: Options / Theme ===================== -->
+        <div id="options" class="tab-content">
+            <section class="section">
+                <label data-i18n="opt.language">Language</label>
+                <p class="hint" style="margin-bottom:10px" data-i18n="opt.languageHint">Choose interface language.</p>
+                <div class="row" style="gap:10px;align-items:center">
+                    <select id="langSelect" style="min-width:160px">
+                        <option value="en" data-i18n="opt.lang.en">English</option>
+                        <option value="de" data-i18n="opt.lang.de">Deutsch</option>
+                        <option value="es" data-i18n="opt.lang.es">Español</option>
+                        <option value="fr" data-i18n="opt.lang.fr">Français</option>
+                        <option value="pt" data-i18n="opt.lang.pt">Português</option>
+                        <option value="ru" data-i18n="opt.lang.ru">Русский</option>
+                        <option value="ja" data-i18n="opt.lang.ja">日本語</option>
+                        <option value="zh" data-i18n="opt.lang.zh">中文</option>
+                        <option value="tr" data-i18n="opt.lang.tr">Türkçe</option>
+                        <option value="ar" data-i18n="opt.lang.ar">العربية</option>
+                    </select>
+                </div>
+            </section>
+            <section class="section">
+                <label data-i18n="opt.colorScheme">Farbschema</label>
+                <p class="hint" style="margin-bottom:10px" data-i18n="opt.colorHint">Wähle ein Farbschema.</p>
+                <div id="themeGrid" class="theme-grid"></div>
+            </section>
+            <section class="section">
+                <label data-i18n="opt.customAccent">Eigener Akzent</label>
+                <div class="row" style="gap:10px;align-items:center">
+                    <input type="color" id="customAccent" value="#00ff66" style="width:48px;height:32px;padding:2px;cursor:pointer;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                    <input type="text" id="customAccentHex" value="#00ff66" style="width:100px;font-family:var(--mono)" maxlength="7" placeholder="#00ff66">
+                    <button id="applyCustomAccent" class="btn-primary" data-i18n="opt.apply">Anwenden</button>
+                    <button id="resetThemeBtn" class="btn-secondary" data-i18n="opt.reset">Standard zurücksetzen</button>
+                </div>
+            </section>
+            <section class="section">
+                <label data-i18n="opt.preview">Vorschau</label>
+                <div class="theme-preview">
+                    <button class="btn-primary" data-i18n="opt.primaryBtn">Primary Button</button>
+                    <button class="btn-secondary" data-i18n="opt.secondaryBtn">Secondary</button>
+                    <span class="theme-preview-text"><span data-i18n="opt.accentText">Akzent-Text ·</span> <code style="color:var(--primary)">var(--primary)</code></span>
+                    <div class="theme-preview-bar"></div>
+                </div>
+            </section>
 
-        <section class="section">
-            <label data-i18n="opt.update">Update</label>
-            <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
-                <span id="addonVersionLabel" style="font-size:12px;color:var(--text-muted)" data-version="1.0.0">Version: –</span>
-                <button id="checkUpdateBtn" class="btn-secondary" data-i18n="opt.checkUpdate">Nach Updates suchen</button>
-            </div>
-            <div id="updateStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
-        </section>
-    </div>
+            <section class="section">
+                <label data-i18n="opt.update">Update</label>
+                <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+                    <span id="addonVersionLabel" style="font-size:12px;color:var(--text-muted)" data-version="1.0.0">Version: –</span>
+                    <button id="checkUpdateBtn" class="btn-secondary" data-i18n="opt.checkUpdate">Nach Updates suchen</button>
+                </div>
+                <div id="updateStatus" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
+            </section>
+        </div>
 
-    <script src="i18n.js"></script>
-    <script src="encoder.js"></script>
-    <script src="presets.js"></script>
-    <script src="utils.js"></script>
-    <script src="sqli-detect.js"></script>
-    <script src="response-view.js"></script>
-    <script src="params.js"></script>
-    <script src="network.js"></script>
-    <script src="theme.js"></script>
-    <script src="tester.js"></script>
-    <script src="panel.js"></script>
+        <script src="i18n.js"></script>
+        <script src="encoder.js"></script>
+        <script src="presets.js"></script>
+        <script src="utils.js"></script>
+        <script src="sqli-detect.js"></script>
+        <script src="response-view.js"></script>
+        <script src="params.js"></script>
+        <script src="network.js"></script>
+        <script src="theme.js"></script>
+        <script src="tester.js"></script>
+        <script src="panel.js"></script>
+
 </body>
 </html>

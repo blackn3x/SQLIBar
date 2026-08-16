@@ -14,6 +14,11 @@ let networkEntries = [];
 let selectedNetIndex = -1;
 let netIdCounter = 1;
 
+    // Variable zum Steuern des Aufnahme-Status (Standard: true)
+
+
+   
+
 function matchesFilter(entry, filter, search) {
     if (filter === "post" && entry.method !== "POST") return false;
     if (filter === "xhr") {
@@ -85,21 +90,21 @@ function bindInlineParamButtons(root) {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             appendParamToUrl(btn.dataset.name, btn.dataset.val || "1");
-            log("Sel-Param → URL: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToUrl") : "Net-Param → URL:") + " " + btn.dataset.name);
         });
     });
     root.querySelectorAll(".selp-body").forEach(btn => {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             appendParamToBody(btn.dataset.name, btn.dataset.val || "1");
-            log("Sel-Param → Body: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToBody") : "Net-Param → Body:") + " " + btn.dataset.name);
         });
     });
     root.querySelectorAll(".selp-pl").forEach(btn => {
         btn.addEventListener("click", (ev) => {
             ev.stopPropagation();
             if (customPayload) customPayload.value = btn.dataset.name + "=" + (btn.dataset.val || "");
-            log("Sel-Param → Payload: " + btn.dataset.name);
+            log((typeof t === "function" ? t("log.netParamToPayload") : "Net-Param → Payload:") + " " + btn.dataset.name);
         });
     });
 }
@@ -121,17 +126,19 @@ function renderNetworkList() {
         const pCount = countParamsForEntry(e);
         const isActive = i === selectedNetIndex;
         const chevron = isActive ? "▼" : "▶";
-        const pBadge = pCount > 0
-            ? `<span class="param-badge query" style="background-color:transparent;color:var(--primary); margin-left:4px;flex-shrink:0" title="${pCount} Parameter">${chevron} ${pCount} param found</span>`
-            : `<span style="margin-left:4px;flex-shrink:0;color:#555;font-size:10px">${chevron}</span>`;
+        const paramLabel = typeof t === "function" ? t("net.paramFound", { n: pCount }) : (pCount + " param found");
+
+        // badge wird nun immer gerendert (egal ob pCount > 0 oder 0)
+        const pBadge = `<span class="param-badge query ${pCount === 0 ? "zero-params" : ""}" style="background-color:transparent;color:${pCount > 0 ? "var(--primary)" : "#555"}; margin-left:4px;flex-shrink:0" title="${pCount}">${chevron} ${paramLabel}</span>`;
+
         const shortUrl = e.url.length > 90 ? e.url.substring(0, 87) + "…" : e.url;
         let html = `
-        <div class="network-item ${isActive ? "active" : ""}" data-idx="${i}">
-            <span class="network-method ${methodClass(e.method)}">${e.method}</span>
-            <span class="network-status ${statusClass(e.status)}">${e.status || "…"}</span>
-            <span class="network-url" title="${e.url.replace(/"/g, "&quot;")}">${shortUrl}</span>
-            ${pBadge}
-        </div>`;
+<div class="network-item ${isActive ? "active" : ""}" data-idx="${i}">
+    <span class="network-method ${methodClass(e.method)}">${e.method}</span>
+    ${pBadge}
+    <span class="network-status ${statusClass(e.status)}">${e.status || "…"}</span>
+    <span class="network-url" title="${e.url.replace(/"/g, "&quot;")}">${shortUrl}</span>
+</div>`;
         // Aufklappen: Parameter direkt unter dem Request
         if (isActive) {
             html += buildInlineParamsHtml(e);
@@ -178,9 +185,10 @@ function showNetworkDetails(idx) {
 
     const st = statusToken(e.status);
     let html = `<span class="network-method ${methodClass(e.method)}">${escapeHtml(e.method)}</span> <span class="tok-url">${escapeHtml(e.url)}</span>\n`;
-    html += `<span class="tok-dim">Status:</span> <span class="${st}">${escapeHtml(e.status || "pending")} ${escapeHtml(e.statusText || "")}</span>\n`;
-    html += `<span class="tok-dim">Type:</span> <span class="tok-val">${escapeHtml(e.type || "-")}</span>\n`;
-    html += `<span class="tok-dim">Time:</span> <span class="tok-val">${escapeHtml(e.time || "-")}</span>\n`;
+    const L = (k, fb) => (typeof t === "function" ? t(k) : fb);
+    html += `<span class="tok-dim">${L("net.status", "Status:")}</span> <span class="${st}">${escapeHtml(e.status || "pending")} ${escapeHtml(e.statusText || "")}</span>\n`;
+    html += `<span class="tok-dim">${L("net.type", "Type:")}</span> <span class="tok-val">${escapeHtml(e.type || "-")}</span>\n`;
+    html += `<span class="tok-dim">${L("net.time", "Time:")}</span> <span class="tok-val">${escapeHtml(e.time || "-")}</span>\n`;
 
     // Parameter-Übersicht in den Details
     const params = getParamsForEntry(e);
@@ -193,24 +201,24 @@ function showNetworkDetails(idx) {
         });
     }
 
-    html += `\n<span class="tok-section">── Request Headers ──</span>\n`;
+    html += `\n<span class="tok-section">${L("net.reqHeaders", "── Request Headers ──")}</span>\n`;
     html += formatHeaderBlock(e.reqHeaders);
 
     if (e.reqBody) {
-        html += `\n<span class="tok-section">── Request Body ──</span>\n<span class="tok-body">${escapeHtml(tryPrettyBody(e.reqBody))}</span>\n`;
+        html += `\n<span class="tok-section">${L("net.reqBody", "── Request Body ──")}</span>\n<span class="tok-body">${escapeHtml(tryPrettyBody(e.reqBody))}</span>\n`;
     } else {
-        html += `\n<span class="tok-section">── Request Body ──</span>\n<span class="tok-dim">(none)</span>\n`;
+        html += `\n<span class="tok-section">${L("net.reqBody", "── Request Body ──")}</span>\n<span class="tok-dim">${L("net.none", "(none)")}</span>\n`;
     }
 
-    html += `\n<span class="tok-section">── Response Headers ──</span>\n`;
+    html += `\n<span class="tok-section">${L("net.resHeaders", "── Response Headers ──")}</span>\n`;
     html += formatHeaderBlock(e.resHeaders);
 
     if (e.resBodyPreview) {
         const pretty = tryPrettyBody(e.resBodyPreview);
-        const truncated = e.resBodyPreview.length >= 12000 ? "\n<span class=\"tok-dim\">… (Preview gekürzt)</span>" : "";
-        html += `\n<span class="tok-section">── Response Body ──</span>\n<span class="tok-body">${escapeHtml(pretty)}</span>${truncated}\n`;
+        const truncated = e.resBodyPreview.length >= 12000 ? "\n<span class=\"tok-dim\">… " + L("sqli.diffTruncated", "truncated") + "</span>" : "";
+        html += `\n<span class="tok-section">${L("net.resPreview", "── Response Preview ──")}</span>\n<span class="tok-body">${escapeHtml(pretty)}</span>${truncated}\n`;
     } else {
-        html += `\n<span class="tok-section">── Response Body ──</span>\n<span class="tok-dim">(noch nicht geladen oder leer – kurz warten oder Request erneut auslösen)</span>\n`;
+        html += `\n<span class="tok-section">${L("net.resPreview", "── Response Preview ──")}</span>\n<span class="tok-dim">${L("net.none", "(none)")}</span>\n`;
     }
 
     networkDetails.innerHTML = html;
@@ -218,7 +226,7 @@ function showNetworkDetails(idx) {
 }
 
 function formatHeaderBlock(text) {
-    if (!text || text === "(none)") return `<span class="tok-dim">(none)</span>\n`;
+    if (!text || text === "(none)") return `<span class="tok-dim">${typeof t === "function" ? t("net.none") : "(none)"}</span>\n`;
     return text.split("\n").map(line => {
         const i = line.indexOf(":");
         if (i === -1) return `<span class="tok-val">${escapeHtml(line)}</span>`;
@@ -296,7 +304,7 @@ function addNetworkEntry(harEntry) {
                         if (sum) sum.textContent = `Page Response (${status}) – anklicken zum Anzeigen`;
 
                         pendingOpenUrl = null;
-                        log(`Page Response geladen → URL/Payload (${status})`);
+                        log((typeof t === "function" ? t("log.pageResponseLoaded") : "Page Response loaded → URL/Payload") + " (" + status + ")");
                     }
                 }
             });
@@ -315,14 +323,42 @@ function addNetworkEntry(harEntry) {
     }
 }
 
-if (browser.devtools && browser.devtools.network) {
-    browser.devtools.network.onRequestFinished.addListener((request) => {
-        addNetworkEntry(request);
+    let isRecording = true;
+    Object.defineProperty(global, "isRecording", {
+        get() { return isRecording; },
+        set(v) { isRecording = !!v; }
     });
-    log("Live Network monitor active");
-} else {
-    log("devtools.network API not available");
-}
+
+    if (browser.devtools && browser.devtools.network) {
+        browser.devtools.network.onRequestFinished.addListener((request) => {
+            if (!isRecording) return; // Beenden, wenn Aufzeichnung pausiert ist
+            addNetworkEntry(request);
+        });
+        log(typeof t === "function" ? t("log.networkActive") : "Live Network monitor active");
+    } else {
+        log(typeof t === "function" ? t("log.networkApiUnavailable") : "devtools.network API not available", "warn");
+    }
+
+    // Event-Listener für den Pause/Start-Button
+    const toggleNetRecordingBtn = document.getElementById("toggleNetRecording");
+    if (toggleNetRecordingBtn) {
+        toggleNetRecordingBtn.addEventListener("click", () => {
+            isRecording = !isRecording;
+            if (isRecording) {
+                toggleNetRecordingBtn.textContent = t("net.pause");
+                toggleNetRecordingBtn.setAttribute("data-i18n", "net.pause");
+                toggleNetRecordingBtn.classList.remove("btn-secondary");
+                toggleNetRecordingBtn.classList.add("btn-primary");
+                log(t("log.netResumed"));
+            } else {
+                toggleNetRecordingBtn.textContent = t("net.start");
+                toggleNetRecordingBtn.setAttribute("data-i18n", "net.start");
+                toggleNetRecordingBtn.classList.remove("btn-primary");
+                toggleNetRecordingBtn.classList.add("btn-secondary");
+                log(t("log.netPaused"));
+            }
+        });
+    }
 
 document.getElementById("clearNetwork")?.addEventListener("click", () => {
     networkEntries = [];
@@ -332,7 +368,7 @@ document.getElementById("clearNetwork")?.addEventListener("click", () => {
         networkDetails.style.display = "none";
     }
     renderNetworkList();
-    log("Network log cleared");
+    log(typeof t === "function" ? t("log.networkCleared") : "Network log cleared");
 });
 
 netFilter?.addEventListener("change", () => renderNetworkList());
@@ -346,14 +382,14 @@ document.getElementById("netUseUrl")?.addEventListener("click", () => {
     const hm = document.getElementById("httpMethod");
     if (hm) hm.value = e.method;
     document.querySelector('[data-tab="request"]')?.click();
-    log("URL → Request Builder");
+    log(typeof t === "function" ? t("log.urlToRequestBuilder") : "URL → Request Builder");
 });
 
 document.getElementById("netCopyUrl")?.addEventListener("click", () => {
     const e = networkEntries[selectedNetIndex];
     if (!e) { log(typeof t === "function" ? t("net.noRequestSelected") : "No request selected"); return; }
     navigator.clipboard.writeText(e.url);
-    log("Request URL copied");
+    log(typeof t === "function" ? t("log.requestUrlCopied") : "Request URL copied");
 });
 
 /** Request → Tester Tab übernehmen */
@@ -403,8 +439,8 @@ document.getElementById("netCopyCurl")?.addEventListener("click", () => {
         parts.push("--data-binary", "'" + e.reqBody.replace(/'/g, "'\\''") + "'");
     }
     const cmd = parts.join(" ");
-    navigator.clipboard.writeText(cmd).then(() => log("cURL kopiert (" + cmd.length + " Zeichen)"))
-        .catch(err => log("cURL Copy fehlgeschlagen: " + err.message));
+    navigator.clipboard.writeText(cmd).then(() => log((typeof t === "function" ? t("log.curlCopied") : "cURL copied") + " (" + cmd.length + ")"))
+        .catch(err => log((typeof t === "function" ? t("log.copyFailed") : "Copy failed") + ": " + err.message, "error"));
 });
 
 document.getElementById("netCopyParams")?.addEventListener("click", () => {
@@ -415,7 +451,7 @@ document.getElementById("netCopyParams")?.addEventListener("click", () => {
     const lines = params.map(p => p.name + "=" + (p.value || ""));
     navigator.clipboard.writeText(lines.join("\n")).then(() => {
         log((typeof t === "function" ? t("net.paramsCopied") : "Params copied:") + " " + params.length);
-    }).catch(err => log("Copy failed: " + err.message));
+    }).catch(err => log((typeof t === "function" ? t("log.copyFailed") : "Copy failed") + ": " + err.message, "error"));
 });
 
 
@@ -434,9 +470,9 @@ document.getElementById("netCopyParams")?.addEventListener("click", () => {
 
     function initNetwork() {
         if (browser?.devtools?.network) {
-            log("Live Network monitor active");
+            log(typeof t === "function" ? t("log.networkActive") : "Live Network monitor active");
         } else {
-            log("devtools.network API not available", "warn");
+            log(typeof t === "function" ? t("log.networkApiUnavailable") : "devtools.network API not available", "warn");
         }
     }
     global.initNetwork = initNetwork;

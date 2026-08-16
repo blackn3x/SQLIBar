@@ -890,13 +890,13 @@ input[type="color"] {
 }
 
     .json-tree .jk {
-        color: #fbbf24;
+        color: var(--primary);
         cursor: pointer;
     }
 
         .json-tree .jk:hover {
             text-decoration: underline;
-            color: #fde68a;
+            color: var(--primary-hov);
         }
 
     .json-tree .jv {
@@ -1385,6 +1385,74 @@ textarea:focus-visible {
             background: #3a4957;
             background-clip: padding-box;
         }
+
+
+.sub-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 4px;
+    border-bottom: 1px solid var(--border, #1a2f25);
+    padding-bottom: 4px;
+}
+
+#tester > input[type="radio"][name="testerSubTab"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.sub-tabs label.sub-tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted, #888);
+    padding: 5px 12px;
+    font-size: 12px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color .15s, background .15s, border-color .15s;
+    user-select: none;
+}
+
+    .sub-tabs label.sub-tab-btn:hover {
+        color: var(--text, #e0e0e0);
+        background: rgba(255,255,255,0.04);
+    }
+
+#tester:has(#subtab-presets:checked) .sub-tabs label[for="subtab-presets"],
+#tester:has(#subtab-request:checked) .sub-tabs label[for="subtab-request"],
+#tester:has(#subtab-pageparams:checked) .sub-tabs label[for="subtab-pageparams"],
+#tester:has(#subtab-sqli:checked) .sub-tabs label[for="subtab-sqli"],
+#tester:has(#subtab-response:checked) .sub-tabs label[for="subtab-response"] {
+    color: var(--primary, #00ff66);
+    border-color: var(--border, #1a2f25);
+    border-bottom-color: transparent;
+    background: var(--bg-input, #0d1510);
+    font-weight: 500;
+}
+/* Hide all panels by default in subtab mode; show via ~ sibling when radio checked.
+           Structure: radios+labels first, then panels-row. We use body-level ids. */
+#tester.subtab-mode .panels-row > details[data-subtab] {
+    display: none !important;
+}
+
+#subtab-presets:checked ~ .panels-row > details[data-subtab="presets"],
+#subtab-request:checked ~ .panels-row > details[data-subtab="request"],
+#subtab-pageparams:checked ~ .panels-row > details[data-subtab="pageparams"],
+#subtab-sqli:checked ~ .panels-row > details[data-subtab="sqli"],
+#subtab-response:checked ~ .panels-row > details[data-subtab="response"] {
+    display: block !important;
+}
+/* Also force open state visually – hide summary */
+#tester.subtab-mode .panels-row > details[data-subtab] > summary {
+    display: none !important;
+}
+
 
 @media (max-width: 700px) {
     .tab-content {

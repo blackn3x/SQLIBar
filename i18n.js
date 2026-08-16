@@ -136,6 +136,9 @@ const I18N = {
         "net.paramsCopied": "Params kopiert:",
         "net.toTesterLog": "Network → Tester:",
         "net.jumpedToRequest": "Zum Request gesprungen",
+        "net.pause": "⏸ Pause",
+        "net.start": "▶ Start",
+        "net.paramFound": "{n} Param gefunden",
 
         // Encode
         "enc.label": "Encode / Decode",
@@ -248,6 +251,10 @@ const I18N = {
         "log.encodeCopied": "Encode-Ausgabe kopiert",
         "log.networkActive": "Live Network Monitor aktiv",
         "log.networkCleared": "Network-Log geleert",
+        "log.netResumed": "Network-Aufnahme fortgesetzt",
+        "log.netPaused": "Network-Aufnahme pausiert",
+        "log.networkApiUnavailable": "devtools.network API nicht verfügbar",
+        "log.copyFailed": "Kopieren fehlgeschlagen",
         "log.requestUrlCopied": "Request-URL kopiert",
         "log.pageScan": "Page-Scan:",
         "log.paramsFound": "Parameter gefunden",
@@ -308,6 +315,7 @@ const I18N = {
         "sqli.hits": "Treffer",
         "sqli.time": "Zeit",
         "sqli.noLenBase": "keine Längen-Baseline",
+        "sqli.highAlert": "⚠ HIGH SQLi-Indikator",
 
         // Network details
         "net.status": "Status:",
@@ -518,6 +526,9 @@ const I18N = {
         "net.paramsCopied": "Params copied:",
         "net.toTesterLog": "Network → Tester:",
         "net.jumpedToRequest": "Jumped to request",
+        "net.pause": "⏸ Pause",
+        "net.start": "▶ Start",
+        "net.paramFound": "{n} param found",
 
         // Encode
         "enc.label": "Encode / Decode",
@@ -630,6 +641,10 @@ const I18N = {
         "log.encodeCopied": "Encode output copied",
         "log.networkActive": "Live Network monitor active",
         "log.networkCleared": "Network log cleared",
+        "log.netResumed": "Network recording resumed",
+        "log.netPaused": "Network recording paused",
+        "log.networkApiUnavailable": "devtools.network API not available",
+        "log.copyFailed": "Copy failed",
         "log.requestUrlCopied": "Request URL copied",
         "log.pageScan": "Page scan:",
         "log.paramsFound": "parameters found",
@@ -690,6 +705,7 @@ const I18N = {
         "sqli.hits": "Hits",
         "sqli.time": "Time",
         "sqli.noLenBase": "no len-base",
+        "sqli.highAlert": "⚠ HIGH SQLi indicator",
 
         // Network details
         "net.status": "Status:",
@@ -843,6 +859,8 @@ const I18N = {
         "sqli.boolRunning": "Test booleano en curso… True → False",
         "sqli.boolFailed": "Test booleano fallido",
         "sqli.boolDone": "Test booleano terminado",
+        "sqli.highAlert": "⚠ Indicador SQLi HIGH",
+        "sqli.noLenBase": "sin baseline de longitud",
 
         "resp.summary": "Respuesta de página",
         "resp.search": "Buscar en respuesta…",
@@ -882,6 +900,9 @@ const I18N = {
         "net.paramsCopied": "Params copiados:",
         "net.toTesterLog": "Red → Tester:",
         "net.jumpedToRequest": "Saltado a la petición",
+        "net.pause": "⏸ Pausar",
+        "net.start": "▶ Iniciar",
+        "net.paramFound": "{n} param. encontrados",
         "enc.label": "Codificar / Decodificar",
         "enc.placeholder": "Insertar texto…",
         "enc.result": "Resultado…",
@@ -988,6 +1009,10 @@ const I18N = {
         "log.encodeCopied": "Salida de encode copiada",
         "log.networkActive": "Monitor de red en vivo activo",
         "log.networkCleared": "Registro de red borrado",
+        "log.netResumed": "Grabación de red reanudada",
+        "log.netPaused": "Grabación de red pausada",
+        "log.networkApiUnavailable": "API devtools.network no disponible",
+        "log.copyFailed": "Error al copiar",
         "log.requestUrlCopied": "URL de petición copiada",
         "log.pageScan": "Escaneo de página:",
         "log.paramsFound": "parámetros encontrados",
@@ -1165,6 +1190,8 @@ const I18N = {
         "sqli.boolRunning": "Boolean-тест… True → False",
         "sqli.boolFailed": "Boolean-тест не удался",
         "sqli.boolDone": "Boolean-тест завершён",
+        "sqli.highAlert": "⚠ HIGH индикатор SQLi",
+        "sqli.noLenBase": "нет len-baseline",
 
         "resp.summary": "Ответ страницы",
         "resp.search": "Поиск в ответе…",
@@ -1204,6 +1231,9 @@ const I18N = {
         "net.paramsCopied": "Params скопированы:",
         "net.toTesterLog": "Сеть → Tester:",
         "net.jumpedToRequest": "Переход к запросу",
+        "net.pause": "⏸ Пауза",
+        "net.start": "▶ Старт",
+        "net.paramFound": "{n} парам. найдено",
         "enc.label": "Кодирование / Декодирование",
         "enc.placeholder": "Вставьте текст…",
         "enc.result": "Результат…",
@@ -1310,6 +1340,10 @@ const I18N = {
         "log.encodeCopied": "Результат кодирования скопирован",
         "log.networkActive": "Монитор сети активен",
         "log.networkCleared": "Журнал сети очищен",
+        "log.netResumed": "Запись сети возобновлена",
+        "log.netPaused": "Запись сети приостановлена",
+        "log.networkApiUnavailable": "API devtools.network недоступна",
+        "log.copyFailed": "Ошибка копирования",
         "log.requestUrlCopied": "URL запроса скопирован",
         "log.pageScan": "Сканирование страницы:",
         "log.paramsFound": "параметров найдено",
@@ -1487,6 +1521,8 @@ const I18N = {
         "sqli.boolRunning": "布尔测试进行中… True → False",
         "sqli.boolFailed": "布尔测试失败",
         "sqli.boolDone": "布尔测试完成",
+        "sqli.highAlert": "⚠ HIGH SQLi 指标",
+        "sqli.noLenBase": "无长度基线",
 
         "resp.summary": "页面响应",
         "resp.search": "在响应中搜索…",
@@ -1526,6 +1562,9 @@ const I18N = {
         "net.paramsCopied": "参数已复制：",
         "net.toTesterLog": "网络 → Tester：",
         "net.jumpedToRequest": "已跳转到请求",
+        "net.pause": "⏸ 暂停",
+        "net.start": "▶ 开始",
+        "net.paramFound": "找到 {n} 个参数",
         "enc.label": "编码 / 解码",
         "enc.placeholder": "插入文本…",
         "enc.result": "结果…",
@@ -1632,6 +1671,10 @@ const I18N = {
         "log.encodeCopied": "编码结果已复制",
         "log.networkActive": "实时网络监视已启用",
         "log.networkCleared": "网络日志已清空",
+        "log.netResumed": "网络录制已恢复",
+        "log.netPaused": "网络录制已暂停",
+        "log.networkApiUnavailable": "devtools.network API 不可用",
+        "log.copyFailed": "复制失败",
         "log.requestUrlCopied": "请求 URL 已复制",
         "log.pageScan": "页面扫描：",
         "log.paramsFound": "个参数已找到",
@@ -1808,6 +1851,8 @@ const I18N = {
         "sqli.boolRunning": "Test booléen en cours… True → False",
         "sqli.boolFailed": "Échec du test booléen",
         "sqli.boolDone": "Test booléen terminé",
+        "sqli.highAlert": "⚠ Indicateur SQLi HIGH",
+        "sqli.noLenBase": "pas de baseline longueur",
 
         "resp.summary": "Réponse de page",
         "resp.search": "Rechercher dans la réponse…",
@@ -1846,6 +1891,9 @@ const I18N = {
         "net.paramsCopied": "Params copiés :",
         "net.toTesterLog": "Réseau → Tester :",
         "net.jumpedToRequest": "Allé à la requête",
+        "net.pause": "⏸ Pause",
+        "net.start": "▶ Démarrer",
+        "net.paramFound": "{n} param. trouvés",
         "enc.label": "Encoder / Décoder",
         "enc.placeholder": "Insérer du texte…",
         "enc.result": "Résultat…",
@@ -1952,6 +2000,10 @@ const I18N = {
         "log.encodeCopied": "Sortie encode copiée",
         "log.networkActive": "Moniteur réseau en direct actif",
         "log.networkCleared": "Journal réseau effacé",
+        "log.netResumed": "Enregistrement réseau repris",
+        "log.netPaused": "Enregistrement réseau en pause",
+        "log.networkApiUnavailable": "API devtools.network indisponible",
+        "log.copyFailed": "Échec de la copie",
         "log.requestUrlCopied": "URL de requête copiée",
         "log.pageScan": "Scan de page :",
         "log.paramsFound": "paramètres trouvés",
@@ -2128,6 +2180,8 @@ const I18N = {
         "sqli.boolRunning": "Teste booleano a decorrer… True → False",
         "sqli.boolFailed": "Teste booleano falhou",
         "sqli.boolDone": "Teste booleano concluído",
+        "sqli.highAlert": "⚠ Indicador SQLi HIGH",
+        "sqli.noLenBase": "sem baseline de tamanho",
 
         "resp.summary": "Resposta da página",
         "resp.search": "Pesquisar na resposta…",
@@ -2166,6 +2220,9 @@ const I18N = {
         "net.paramsCopied": "Params copiados:",
         "net.toTesterLog": "Rede → Tester:",
         "net.jumpedToRequest": "Foi para a requisição",
+        "net.pause": "⏸ Pausar",
+        "net.start": "▶ Iniciar",
+        "net.paramFound": "{n} param. encontrados",
         "enc.label": "Codificar / Decodificar",
         "enc.placeholder": "Inserir texto…",
         "enc.result": "Resultado…",
@@ -2272,6 +2329,10 @@ const I18N = {
         "log.encodeCopied": "Saída do encode copiada",
         "log.networkActive": "Monitor de rede ao vivo ativo",
         "log.networkCleared": "Log de rede limpo",
+        "log.netResumed": "Gravação de rede retomada",
+        "log.netPaused": "Gravação de rede pausada",
+        "log.networkApiUnavailable": "API devtools.network indisponível",
+        "log.copyFailed": "Falha ao copiar",
         "log.requestUrlCopied": "URL da requisição copiada",
         "log.pageScan": "Scan da página:",
         "log.paramsFound": "parâmetros encontrados",
@@ -2448,6 +2509,8 @@ const I18N = {
         "sqli.boolRunning": "Booleanテスト実行中… True → False",
         "sqli.boolFailed": "Booleanテスト失敗",
         "sqli.boolDone": "Booleanテスト完了",
+        "sqli.highAlert": "⚠ HIGH SQLi 指標",
+        "sqli.noLenBase": "長さベースラインなし",
 
         "resp.summary": "ページレスポンス",
         "resp.search": "レスポンス内を検索…",
@@ -2486,6 +2549,9 @@ const I18N = {
         "net.paramsCopied": "Paramsをコピー:",
         "net.toTesterLog": "ネットワーク → Tester:",
         "net.jumpedToRequest": "リクエストへ移動しました",
+        "net.pause": "⏸ 一時停止",
+        "net.start": "▶ 開始",
+        "net.paramFound": "{n} 個のパラメータ",
         "enc.label": "エンコード / デコード",
         "enc.placeholder": "テキストを入力…",
         "enc.result": "結果…",
@@ -2592,6 +2658,10 @@ const I18N = {
         "log.encodeCopied": "エンコード結果をコピーしました",
         "log.networkActive": "ライブネットワークモニター稼働中",
         "log.networkCleared": "ネットワークログをクリアしました",
+        "log.netResumed": "ネットワーク録画を再開しました",
+        "log.netPaused": "ネットワーク録画を一時停止しました",
+        "log.networkApiUnavailable": "devtools.network API が利用できません",
+        "log.copyFailed": "コピー失敗",
         "log.requestUrlCopied": "リクエストURLをコピーしました",
         "log.pageScan": "ページスキャン:",
         "log.paramsFound": "個のパラメータを検出",
@@ -2783,6 +2853,7 @@ const I18N = {
         "sqli.boolRunning": "Boolean testi çalışıyor… True → False",
         "sqli.boolFailed": "Boolean testi başarısız",
         "sqli.boolDone": "Boolean testi bitti",
+        "sqli.highAlert": "⚠ HIGH SQLi göstergesi",
 
         // Page Response
         "resp.summary": "Sayfa Yanıtı",
@@ -2824,6 +2895,9 @@ const I18N = {
         "net.paramsCopied": "Parametreler kopyalandı:",
         "net.toTesterLog": "Ağ → Tester:",
         "net.jumpedToRequest": "İsteğe atlandı",
+        "net.pause": "⏸ Duraklat",
+        "net.start": "▶ Başlat",
+        "net.paramFound": "{n} param bulundu",
 
         // Encode
         "enc.label": "Encode / Decode",
@@ -2936,6 +3010,10 @@ const I18N = {
         "log.encodeCopied": "Encode çıktısı kopyalandı",
         "log.networkActive": "Canlı ağ monitörü aktif",
         "log.networkCleared": "Ağ günlüğü temizlendi",
+        "log.netResumed": "Ağ kaydı devam ediyor",
+        "log.netPaused": "Ağ kaydı duraklatıldı",
+        "log.networkApiUnavailable": "devtools.network API kullanılamıyor",
+        "log.copyFailed": "Kopyalama başarısız",
         "log.requestUrlCopied": "İstek URL’si kopyalandı",
         "log.pageScan": "Sayfa taraması:",
         "log.paramsFound": "parametre bulundu",
@@ -3162,6 +3240,7 @@ const I18N = {
         "sqli.boolRunning": "اختبار Boolean جارٍ… True → False",
         "sqli.boolFailed": "فشل اختبار Boolean",
         "sqli.boolDone": "انتهى اختبار Boolean",
+        "sqli.highAlert": "⚠ مؤشر SQLi عالي",
 
         // Page Response
         "resp.summary": "استجابة الصفحة",
@@ -3203,6 +3282,9 @@ const I18N = {
         "net.paramsCopied": "تم نسخ المعلمات:",
         "net.toTesterLog": "الشبكة → Tester:",
         "net.jumpedToRequest": "تم الانتقال للطلب",
+        "net.pause": "⏸ إيقاف مؤقت",
+        "net.start": "▶ بدء",
+        "net.paramFound": "{n} معلمة",
 
         // Encode
         "enc.label": "Encode / Decode",
@@ -3315,6 +3397,10 @@ const I18N = {
         "log.encodeCopied": "تم نسخ مخرجات Encode",
         "log.networkActive": "مراقب الشبكة المباشر نشط",
         "log.networkCleared": "تم مسح سجل الشبكة",
+        "log.netResumed": "تم استئناف تسجيل الشبكة",
+        "log.netPaused": "تم إيقاف تسجيل الشبكة مؤقتاً",
+        "log.networkApiUnavailable": "واجهة devtools.network غير متاحة",
+        "log.copyFailed": "فشل النسخ",
         "log.requestUrlCopied": "تم نسخ URL الطلب",
         "log.pageScan": "فحص الصفحة:",
         "log.paramsFound": "معلمة وُجدت",
@@ -3536,6 +3622,14 @@ function applyI18n() {
     }
     const netEmpty = document.querySelector("#networkList .network-empty");
     if (netEmpty) netEmpty.textContent = t("net.empty");
+
+    // Pause / Start network recording button
+    const toggleNetBtn = document.getElementById("toggleNetRecording");
+    if (toggleNetBtn) {
+        const recording = (typeof isRecording !== "undefined") ? isRecording : !toggleNetBtn.classList.contains("btn-secondary");
+        toggleNetBtn.textContent = recording ? t("net.pause") : t("net.start");
+        toggleNetBtn.setAttribute("data-i18n", recording ? "net.pause" : "net.start");
+    }
 
 }
 

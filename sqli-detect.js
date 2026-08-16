@@ -197,6 +197,27 @@ function analyzeSqliResponse(body, status, length, ms) {
         }
     }
 
+    // Sort: high → med → low
+    const sevOrder = { high: 0, med: 1, low: 2 };
+    hits.sort((a, b) => (sevOrder[a.sev] ?? 9) - (sevOrder[b.sev] ?? 9));
+
+    // High-severity alert toast / popup
+    const highHits = hits.filter(h => h.sev === "high");
+    if (highHits.length && typeof showToast === "function") {
+        const names = highHits.slice(0, 3).map(h => h.name).join(", ");
+        const more = highHits.length > 3 ? " +" + (highHits.length - 3) : "";
+        const title = (typeof t === "function" ? t("sqli.highAlert") : "⚠ HIGH SQLi indicator") +
+            " (" + highHits.length + ")";
+        showToast(title, "error", {
+            detail: names + more,
+            preview: highHits[0].match || "",
+            ms: 9000
+        });
+    } else if (highHits.length && typeof log === "function") {
+        log((typeof t === "function" ? t("sqli.highAlert") : "HIGH SQLi") + ": " +
+            highHits.map(h => h.name).join(", "), "error");
+    }
+
     let deltaHtml = "";
     if (baselineLength != null) {
         const delta = len - baselineLength;
@@ -204,7 +225,7 @@ function analyzeSqliResponse(body, status, length, ms) {
         const color = delta === 0 ? "#888" : (Math.abs(delta) > 50 ? "#fbbf24" : "#aaa");
         deltaHtml = `<span style="color:${color}">Δ ${sign}${delta} B</span>`;
     } else {
-        deltaHtml = `<span style="color:#666">no len-base</span>`;
+        deltaHtml = `<span style="color:#666">${typeof t === "function" ? t("sqli.noLenBase") : "no len-base"}</span>`;
     }
 
     let timeHtml = `<span>Time: <b>${timing || "-"}</b> ms</span>`;
