@@ -32,6 +32,24 @@ function updateBaselineInfo() {
     el.textContent = parts.length ? (prefix + " " + parts.join(" · ")) : none;
 }
 
+/** Small badge next to the SQLi-Erkennung sub-tab: "Hits: N" */
+function updateSqliAlertBadge(totalHits, highHits) {
+    const el = document.getElementById("sqliAlertCount");
+    if (!el) return;
+    if (!totalHits) {
+        el.textContent = "";
+        el.removeAttribute("data-sev");
+        el.title = "";
+        return;
+    }
+    const n = highHits > 0 ? highHits : totalHits;
+    el.textContent = "Hits: " + n;
+    el.setAttribute("data-sev", highHits > 0 ? "high" : "med");
+    el.title = highHits > 0
+        ? (highHits + " high · " + totalHits + " total")
+        : (totalHits + " indicator(s)");
+}
+
 const SQLI_PATTERNS = [
     // ===================== MySQL / MariaDB =====================
     { name: "MySQL syntax", re: /you have an error in your sql syntax/i, sev: "high" },
@@ -203,6 +221,7 @@ function analyzeSqliResponse(body, status, length, ms) {
 
     // High-severity alert toast / popup
     const highHits = hits.filter(h => h.sev === "high");
+    updateSqliAlertBadge(hits.length, highHits.length);
     if (highHits.length && typeof showToast === "function") {
         const names = highHits.slice(0, 3).map(h => h.name).join(", ");
         const more = highHits.length > 3 ? " +" + (highHits.length - 3) : "";
@@ -735,6 +754,7 @@ function renderDiff(text) {
 
     global.analyzeSqliResponse = analyzeSqliResponse;
     global.updateBaselineInfo = updateBaselineInfo;
+    global.updateSqliAlertBadge = updateSqliAlertBadge;
     global.initSqliDetect = initSqliDetect;
     global.getPayloadNeedles = getPayloadNeedles;
     global.renderReflection = renderReflection;

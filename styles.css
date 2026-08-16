@@ -396,6 +396,22 @@ pre[data-placeholder],
     margin-top: 4px;
 }
 
+/* Seiten-Response: größer + per Drag vertikal ziehbar */
+#testerResponse {
+    min-height: 160px;
+    max-height: min(70vh, 720px);
+    resize: vertical;
+    overflow: auto;
+}
+
+#testerResponseDetails {
+    min-height: 0;
+}
+
+#testerResponseDetails > pre#testerResponse {
+    width: 100%;
+}
+
     pre:empty::before,
     pre[data-placeholder]:empty::before {
         content: attr(data-placeholder);
