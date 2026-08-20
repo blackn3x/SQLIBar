@@ -212,6 +212,301 @@ function undoWafBypass() {
     }
 }
 
+
+// ---------- Cookie Editor ----------
+const cookieListEl = document.getElementById('cookieList');
+const cookieSerializeBox = document.getElementById('cookieSerializeBox');
+const cookieSerializePreview = document.getElementById('cookieSerializePreview');
+const cookieCountBadge = document.getElementById('cookieCountBadge');
+
+/** Cookie-Zeile erzeugen */
+function createCookieRow(name = '', value = '') {
+    const row = document.createElement('div');
+    row.className = 'param-row cookie-row';
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:4px';
+    row.innerHTML = `
+        <input type="text" class="cookie-name" placeholder="Name" value="${escapeHtml(name)}" style="width:120px;font-size:12px">
+        <input type="text" class="cookie-value" placeholder="Value" value="${escapeHtml(value)}" style="flex:1;font-size:12px;font-family:ui-monospace,monospace">
+        <button class="btn-secondary cookie-del" style="font-size:11px;padding:2px 6px" title="Löschen">✕</button>
+    `;
+    row.querySelector('.cookie-del').onclick = () => {
+        row.remove();
+        updateCookieBadge();
+        checkSerializeDetection();
+    };
+    row.querySelector('.cookie-value').addEventListener('input', () => {
+        checkSerializeDetection();
+    });
+    return row;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Aktuelle Cookies aus dem UI lesen */
+function getCookiesFromUI() {
+    const cookies = [];
+    cookieListEl.querySelectorAll('.cookie-row').forEach(row => {
+        const name = row.querySelector('.cookie-name').value.trim();
+        const value = row.querySelector('.cookie-value').value;
+        if (name) cookies.push({ name, value });
+    });
+    return cookies;
+}
+
+/** Cookie-Header korrekt serialisieren (RFC 6265 / Browser-Format) */
+function serializeCookies(cookies) {
+    return cookies
+        .filter(c => c.name)
+        .map(c => `${c.name}=${c.value}`)
+        .join('; ');
+}
+
+/** Cookie-Header parsen (robust) */
+function parseCookieHeader(headerValue) {
+    if (!headerValue) return [];
+    // Cookie: name=value; name2=value2
+    const raw = headerValue.replace(/^Cookie:\s*/i, '').trim();
+    if (!raw) return [];
+    return raw.split(';').map(part => {
+        const idx = part.indexOf('=');
+        if (idx === -1) return { name: part.trim(), value: '' };
+        return {
+            name: part.slice(0, idx).trim(),
+            value: part.slice(idx + 1).trim()
+        };
+    }).filter(c => c.name);
+}
+
+/** Badge aktualisieren */
+function updateCookieBadge() {
+    const count = getCookiesFromUI().length;
+    cookieCountBadge.textContent = count > 0 ? count : '';
+    cookieCountBadge.dataset.sev = count > 0 ? 'med' : '';
+}
+
+/** PHP serialize() Erkennung (einfach & sicher) */
+/** Base64 erkennen (auch URL-safe und mit Padding) */
+function isLikelyBase64(str) {
+    if (!str || typeof str !== 'string') return false;
+    const s = str.trim().replace(/\s+/g, '');
+    // Mindestlänge + gültige Zeichen
+    if (s.length < 8 || s.length % 4 === 1) return false;
+    return /^[A-Za-z0-9+/_-]+={0,2}$/.test(s);
+}
+
+/** Sicher Base64 dekodieren (standard + URL-safe) */
+function safeBase64Decode(str) {
+    try {
+        let s = str.trim().replace(/\s+/g, '');
+        // URL-safe → standard
+        s = s.replace(/-/g, '+').replace(/_/g, '/');
+        // Padding ergänzen
+        while (s.length % 4) s += '=';
+        const decoded = atob(s);
+        // Nur wenn das Ergebnis sinnvoll aussieht (printable / serialize)
+        return decoded;
+    } catch {
+        return null;
+    }
+}
+
+/** PHP serialize erkennen (auch nach Base64-Decode) */
+function looksLikePhpSerialize(str) {
+    if (!str || typeof str !== 'string') return false;
+    const t = str.trim();
+    // Klassische Typen: a: O: s: i: b: d: N: r: R:
+    return /^(a|O|s|i|b|d|N|r|R):\d+:/.test(t);
+}
+function analyzeCookieValue(value) {
+    if (!value) return { isSerialize: false };
+
+    // 1. Direkt serialize?
+    if (looksLikePhpSerialize(value)) {
+        return {
+            isSerialize: true,
+            isBase64: false,
+            raw: value,
+            decoded: null,
+            serializeStr: value
+        };
+    }
+
+    // 2. Base64 → serialize?
+    if (isLikelyBase64(value)) {
+        const decoded = safeBase64Decode(value);
+        if (decoded && looksLikePhpSerialize(decoded)) {
+            return {
+                isSerialize: true,
+                isBase64: true,
+                raw: value,
+                decoded,
+                serializeStr: decoded
+            };
+        }
+
+        // 3. Doppeltes Base64 (manchmal vorkommend)
+        if (decoded && isLikelyBase64(decoded)) {
+            const decoded2 = safeBase64Decode(decoded);
+            if (decoded2 && looksLikePhpSerialize(decoded2)) {
+                return {
+                    isSerialize: true,
+                    isBase64: true,
+                    raw: value,
+                    decoded: decoded2,
+                    serializeStr: decoded2,
+                    doubleBase64: true
+                };
+            }
+        }
+    }
+
+    return { isSerialize: false };
+}
+function checkSerializeDetection() {
+    if (!document.getElementById('cookieDetectSerialize')?.checked) {
+        cookieSerializeBox.style.display = 'none';
+        return;
+    }
+
+    const cookies = getCookiesFromUI();
+    let found = null;
+    let analysis = null;
+
+    for (const c of cookies) {
+        const a = analyzeCookieValue(c.value);
+        if (a.isSerialize) {
+            found = c;
+            analysis = a;
+            break;
+        }
+    }
+
+    if (found && analysis) {
+        cookieSerializeBox.style.display = 'block';
+        cookieSerializeBox.dataset.cookieName = found.name;
+
+        let info = `Cookie: ${found.name}\n`;
+        if (analysis.isBase64) {
+            info += analysis.doubleBase64
+                ? `⚠ Base64 (doppelt) → serialize() erkannt\n\n`
+                : `⚠ Base64 → serialize() erkannt\n\n`;
+            info += `── Original (Base64) ──\n${analysis.raw}\n\n`;
+            info += `── Dekodiert (serialize) ──\n${analysis.serializeStr}`;
+        } else {
+            info += `⚠ serialize() erkannt (raw)\n\n${analysis.serializeStr}`;
+        }
+
+        cookieSerializePreview.textContent = info;
+    } else {
+        cookieSerializeBox.style.display = 'none';
+    }
+}
+// Base64 dekodieren und den Value ersetzen
+document.getElementById('cookieDecodeBase64')?.addEventListener('click', () => {
+    const name = cookieSerializeBox.dataset.cookieName;
+    const row = [...cookieListEl.querySelectorAll('.cookie-row')]
+        .find(r => r.querySelector('.cookie-name').value === name);
+    if (!row) return;
+
+    const valInput = row.querySelector('.cookie-value');
+    const analysis = analyzeCookieValue(valInput.value);
+    if (analysis.isSerialize && analysis.decoded) {
+        valInput.value = analysis.serializeStr;   // jetzt raw serialize
+        checkSerializeDetection();
+    }
+});
+
+// serialize wieder als Base64 speichern
+document.getElementById('cookieEncodeBase64')?.addEventListener('click', () => {
+    const name = cookieSerializeBox.dataset.cookieName;
+    const row = [...cookieListEl.querySelectorAll('.cookie-row')]
+        .find(r => r.querySelector('.cookie-name').value === name);
+    if (!row) return;
+
+    const valInput = row.querySelector('.cookie-value');
+    try {
+        valInput.value = btoa(valInput.value);
+        checkSerializeDetection();
+    } catch (e) {
+        alert('Base64-Encode fehlgeschlagen');
+    }
+});
+/** Aus Header laden */
+document.getElementById('cookieParseFromHeader')?.addEventListener('click', () => {
+    const headers = document.getElementById('testerHeaders').value;
+    const match = headers.match(/^Cookie:\s*(.+)$/im);
+    const cookieStr = match ? match[1] : '';
+    const parsed = parseCookieHeader(cookieStr);
+
+    cookieListEl.innerHTML = '';
+    if (parsed.length === 0) {
+        cookieListEl.innerHTML = `<div class="param-empty" data-i18n="cookie.empty">Keine Cookies gefunden.</div>`;
+    } else {
+        parsed.forEach(c => cookieListEl.appendChild(createCookieRow(c.name, c.value)));
+    }
+    updateCookieBadge();
+    checkSerializeDetection();
+});
+
+/** In Header schreiben (korrekt serialisiert) */
+document.getElementById('cookieSerializeToHeader')?.addEventListener('click', () => {
+    const cookies = getCookiesFromUI();
+    const serialized = serializeCookies(cookies);
+    const headersEl = document.getElementById('testerHeaders');
+    let headers = headersEl.value;
+
+    // Bestehenden Cookie-Header ersetzen oder hinzufügen
+    if (/^Cookie:\s*.+$/im.test(headers)) {
+        headers = headers.replace(/^Cookie:\s*.+$/im, `Cookie: ${serialized}`);
+    } else {
+        headers = headers.trim() + (headers.trim() ? '\n' : '') + `Cookie: ${serialized}`;
+    }
+    headersEl.value = headers;
+    updateCookieBadge();
+});
+
+/** + Cookie */
+document.getElementById('cookieAddRow')?.addEventListener('click', () => {
+    // leeres Placeholder entfernen
+    const empty = cookieListEl.querySelector('.param-empty');
+    if (empty) empty.remove();
+    cookieListEl.appendChild(createCookieRow());
+    updateCookieBadge();
+});
+
+/** Leeren */
+document.getElementById('cookieClear')?.addEventListener('click', () => {
+    cookieListEl.innerHTML = `<div class="param-empty" data-i18n="cookie.empty">Keine Cookies.</div>`;
+    cookieSerializeBox.style.display = 'none';
+    updateCookieBadge();
+});
+
+/** Unserialize Preview (nur Anzeige, kein eval!) */
+document.getElementById('cookieUnserialize')?.addEventListener('click', () => {
+    const name = cookieSerializeBox.dataset.cookieName;
+    const cookies = getCookiesFromUI();
+    const c = cookies.find(x => x.name === name);
+    if (!c) return;
+
+    // Einfache visuelle Aufbereitung (kein echtes Unserialize aus Sicherheitsgründen)
+    let preview = c.value;
+    // Zeilenumbrüche für bessere Lesbarkeit bei langen serialize-Strings
+    preview = preview
+        .replace(/;/g, ';\n')
+        .replace(/{/g, '{\n  ')
+        .replace(/}/g, '\n}');
+    cookieSerializePreview.textContent = `Cookie: ${name}\n--- Unserialize Preview (formatiert) ---\n${preview}`;
+});
+
+/** Wieder serialisieren (nur wenn der User den Value geändert hat) */
+document.getElementById('cookieReserialize')?.addEventListener('click', () => {
+    // Hier könntest du später eine echte serialize-Hilfe einbauen.
+    // Aktuell: einfach Hinweis
+    alert('Value manuell anpassen und dann „In Cookie-Header schreiben“ klicken.');
+});
+
 // Event Listener registrieren (nach DOM-Ready)
 document.addEventListener("DOMContentLoaded", () => {
     const providerSel = document.getElementById("wafProvider");

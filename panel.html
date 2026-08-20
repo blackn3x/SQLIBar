@@ -238,6 +238,53 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                         <button id="copyCurl2" class="btn-secondary" data-i18n="url.curl" data-i18n-title="url.curl" title="Copy as cURL">cURL</button>
                         <button id="injectPage2" class="btn-primary" data-i18n="url.open">↗ Öffnen</button>
                     </div>
+
+                    <!-- ===================== Cookie Editor ===================== -->
+                    <details class="section" id="cookieEditorSection" open style="margin-top:12px">
+                        <summary>
+                            <span data-i18n="cookie.title">Cookies bearbeiten</span>
+                            <span id="cookieCountBadge" class="sqli-alert-badge" style="margin-left:6px"></span>
+                        </summary>
+                        <div style="padding-top:6px">
+                            <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
+                                <button id="cookieParseFromHeader" class="btn-secondary" style="font-size:11px" data-i18n="cookie.parse">
+                                    ⬇ Aus Cookie-Header laden
+                                </button>
+                                <button id="cookieSerializeToHeader" class="btn-primary" style="font-size:11px" data-i18n="cookie.serialize">
+                                    ⬆ In Cookie-Header schreiben
+                                </button>
+                                <button id="cookieDecodeBase64" class="btn-secondary" style="font-size:11px" data-i18n="cookie.decodeB64">
+                                    Base64 → serialize (in Value schreiben)
+                                </button>
+                                <button id="cookieEncodeBase64" class="btn-secondary" style="font-size:11px" data-i18n="cookie.encodeB64">
+                                    serialize → Base64
+                                </button>
+                                <button id="cookieAddRow" class="btn-secondary" style="font-size:11px" data-i18n="cookie.add">+ Cookie</button>
+                                <button id="cookieClear" class="btn-secondary" style="font-size:11px" data-i18n="cookie.clear">Leeren</button>
+                                <label style="margin:0;font-weight:400;text-transform:none;font-size:11px" title="PHP serialize() Format erkennen & anzeigen">
+                                    <input type="checkbox" id="cookieDetectSerialize" checked>
+                                    <span data-i18n="cookie.detectSerialize">serialize() erkennen</span>
+                                </label>
+                            </div>
+
+                            <div id="cookieList" class="param-list" style="max-height:220px;overflow:auto">
+                                <!-- rows via JS -->
+                                <div class="param-empty" data-i18n="cookie.empty">Keine Cookies. Aus Header laden oder manuell hinzufügen.</div>
+                            </div>
+
+                            <!-- serialize() Hinweis / Decoder -->
+                            <div id="cookieSerializeBox" style="display:none;margin-top:8px;padding:8px;background:var(--bg-input,#0d1510);border:1px solid var(--border,#1a2f25);border-radius:6px">
+                                <div style="font-size:12px;color:#fbbf24;margin-bottom:4px" data-i18n="cookie.serializeDetected">
+                                    ⚠ PHP serialize() erkannt
+                                </div>
+                                <pre id="cookieSerializePreview" style="font-size:11px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:120px;overflow:auto"></pre>
+                                <div class="row" style="margin-top:6px;gap:6px">
+                                    <button id="cookieUnserialize" class="btn-secondary" style="font-size:11px" data-i18n="cookie.unserialize">Unserialize (Preview)</button>
+                                    <button id="cookieReserialize" class="btn-secondary" style="font-size:11px" data-i18n="cookie.reserialize">Wieder serialisieren</button>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
                     <!-- Header SQLi Test -->
                     <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap;align-items:center">
                         <button id="testAllHeadersBtn" class="btn-primary" style="font-size:12px" data-i18n="hdrtest.btn">
@@ -350,8 +397,8 @@ X-Forwarded-For: 127.0.0.1"></textarea>
                     <!-- Boolean Blind Mini-Test -->
                     <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap;align-items:center">
                         <span style="font-size:12px;color:#888;font-weight:500" data-i18n="sqli.boolTitle">Boolean-Test:</span>
-                        <input id="boolTrueExpr" type="text" value=" AND 1=1" title="True-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolTrueTitle">
-                        <input id="boolFalseExpr" type="text" value=" AND 1=2" title="False-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolFalseTitle">
+                        <input id="boolTrueExpr" type="text" value="' AND 1=1-- -" title="True-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolTrueTitle">
+                        <input id="boolFalseExpr" type="text" value="' AND 1=2-- -" title="False-Ausdruck" style="width:110px;font-family:ui-monospace,monospace;font-size:11px" data-i18n-title="sqli.boolFalseTitle">
                         <select id="boolInjectMode" style="font-size:11px;width:130px" title="Wohin injizieren">
                             <option value="lastparam" data-i18n="sqli.boolLastParam">Letzter Param</option>
                             <option value="payload" data-i18n="sqli.boolPayload">Payload-Feld</option>
